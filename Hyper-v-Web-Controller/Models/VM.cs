@@ -11,7 +11,11 @@ namespace Hyper_v_Web_Controller.Models
         public string Ip { get; set; }
         public DateTime CreationTime { get; set; }
         public int UsageTime { get; set; }
+
         public int CreatorId { get; set; }
         public User Creator { get; set; }
+
+        public int RealizedVMImageId { get; set; }
+        public VMImage RealizedVMImage { get; set; }
     }
 }
