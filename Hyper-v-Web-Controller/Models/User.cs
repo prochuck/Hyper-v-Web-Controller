@@ -10,5 +10,11 @@ namespace Hyper_v_Web_Controller.Models
         public string Login { get; set; }
         [Required]
         public string PasswordHash { get; set; }
+
+
+        [Required]
+        public int RoleId { get; set; }
+        [Required]
+        public Role Role { get; set; }
     }
 }
