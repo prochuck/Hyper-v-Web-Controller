@@ -1,4 +1,6 @@
 ﻿using Hyper_v_Web_Controller.Models;
+using System.Management;
+
 namespace Hyper_v_Web_Controller.Interfaces
 {
     //todo прикрутить сюда авторизацию для пользователей.
@@ -6,11 +8,10 @@ namespace Hyper_v_Web_Controller.Interfaces
     /// Переименовать. штука для управления hyper-v
     /// </summary>
     public interface IHyperVThing
-    {
-
+    {       
         public VMImage[] GetVMImages();
         public VM[] GetUserVMS(User user);
-        public VM CreateVM(VMImage vMImage, int machineName);
+        public VM CreateVM(VMImage vMImage, string machineName);
         public bool DeleteVM(VM vm);
         public bool CreateSnapshot(VM vm);
         public bool RollbackMachine(VM VMToRollback,int snapShotId);
