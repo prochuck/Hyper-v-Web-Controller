@@ -13,7 +13,13 @@ namespace Hyper_v_Web_Controller
         
         public AppDBContext(DbContextOptions options):base(options)
         {
-            Database.EnsureCreated();
+           if(Database.EnsureCreated())
+            {
+                Roles.Add(new Role() { RoleName = "Admin" });
+                Roles.Add(new Role() { RoleName = "User" });
+                Users.Add(new User() { RoleId=1,Login="admin",PasswordHash="123".GetHashCode().ToString()});
+                this.SaveChanges();
+            }
         }
     }
 }
