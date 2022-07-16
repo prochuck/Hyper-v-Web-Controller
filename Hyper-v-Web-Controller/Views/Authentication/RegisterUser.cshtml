@@ -1,10 +1,24 @@
 ﻿
 <form method="post">
-    <input type="text" name="login" placeholder="логин" />
-    <input type="password" name="password" placeholder="пароль" />
-    <input id="role" name="roleId" type="radio" value="1" />
+    <style>
+     p {line-height: 0.1;}
+    </style>
+    <h1>Регистрация нового пользователя</h1>
+    <h3><p>
+     Выберите права пользователя:</p>
+    <input id="role" name="roleId" type="radio" value="1" />  
     <span>Админ</span> <br />
     <input id="role" name="roleId" type="radio" value="2" /> 
     <span>User</span> <br />
+    <p>
+    Логин пользователя:</p>
+    <input type="text" name="login" placeholder="логин" />
+    <p>
+    Пароль пользователя:</p>
+    <input type="password" name="password" placeholder="пароль" />
+    <p></p>
+   
     <input type="submit" value="Создать" />
+    <a href="/"><input type="button" value="Вернуться" /></a>
+    </h3>
 </form>

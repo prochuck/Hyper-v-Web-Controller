@@ -46,7 +46,7 @@ namespace Hyper_v_Web_Controller.Controllers
         {
             try
             {
-                VM vM = hyperVThing.CreateVM(VMRImageepository.Get( imageId), machineName, User.Claims.Where(e=>e.Type== ClaimTypes.Name).First().Value);
+                VM vM = hyperVThing.CreateVM(VMRImageepository.Get(imageId), machineName, User.Claims.Where(e=>e.Type== ClaimTypes.Name).First().Value);
                 vM.CreatorId = 1;
                 VMRepository.Create(vM);
                 VMRepository.Save();

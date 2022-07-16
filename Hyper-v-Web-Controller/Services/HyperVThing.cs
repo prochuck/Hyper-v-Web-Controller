@@ -7,6 +7,11 @@ namespace Hyper_v_Web_Controller.Services
 {
 	public class HyperVThing : IHyperVThing
 	{
+		string path=null;
+		public HyperVThing(IConfiguration configuration)
+        {
+			path = configuration["VMFolder"];
+		}
 		static ManagementScope scope = new ManagementScope(@"\root\virtualization\v2", null); //Путь к API Hyper-V
 		public VMImage[] GetVMImages() //Возвращаяет доступные образы для клонирования
 		{
@@ -18,7 +23,7 @@ namespace Hyper_v_Web_Controller.Services
 		}
 		public VM CreateVM(VMImage vMImage, string machineName,string userName) //Возвращаяет созданную ВМ
 		{
-			VMImage userVMimage = null;
+			//VMImage userVMimage = null;
 			VM userVM = null;
 
 
@@ -46,16 +51,17 @@ namespace Hyper_v_Web_Controller.Services
 
 
 			//Копирование директории ВМ с новым именем
-			userVMimage = new VMImage() { Name = machineName, Path = vMImage.Path +@"\" + vMImage.Name + @"\" + machineName };
+			//userVMimage = new VMImage() { Name = machineName, Path = vMImage.Path +@"\" + vMImage.Name + @"\" + machineName };
 			userVM = new VM() {VmName = machineName, RealizedVMImageId = vMImage.Id};
-			System.IO.Directory.CreateDirectory(userVMimage.Path);
+			if (!System.IO.Directory.Exists(path + @"\" + userName + @"\" + machineName))
+				System.IO.Directory.CreateDirectory(path + @"\" + userName + @"\" + machineName);
+			else return null;
 			if (System.IO.Directory.Exists(vMImage.Path + @"\Virtual Hard Disks"))
 			{
 				string[] files = System.IO.Directory.GetFiles(vMImage.Path + @"\Virtual Hard Disks", "*", SearchOption.AllDirectories);
 				// Copy the files and overwrite destination files if they already exist.					
 				foreach (string s in files)
-				{ System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true);
-				}
+				 System.IO.File.Copy(s, System.IO.Path.Combine(path + @"\" + userName + @"\" + machineName, System.IO.Path.GetFileName(s)), true);				
 			}
 			else return null;
 
@@ -66,7 +72,7 @@ namespace Hyper_v_Web_Controller.Services
 				 .Where(e => e.Properties.Cast<PropertyData>().Where(e2 => e2.Value as string == "Параметры виртуального жесткого диска (Майкрософт).").Count() != 0)
 				 .Select(e => e.GetRelated("Msvm_StorageAllocationSettingData").Cast<ManagementObject>().First()).ToArray();
 			ManagementObject @object = disks[0]; //Вроде бы работает только для одного VHD!!!!
-			@object.SetPropertyValue("HostResource", new string[] { Directory.GetFiles(userVMimage.Path).Where(e => Path.GetExtension(e).ToLower() == ".vhdx").First() });
+			@object.SetPropertyValue("HostResource", new string[] { Directory.GetFiles(path + @"\" + userName + @"\" + machineName).Where(e => Path.GetExtension(e).ToLower() == ".vhdx").First() });
 			/*string[] DiscToStr = new string[disks.Count()];
 			 for (int i = 0; i < disks.Count(); i++)
 			 {
@@ -100,7 +106,7 @@ namespace Hyper_v_Web_Controller.Services
 			WaitForJob(outParams, virtualSystemService, scope);
 			return userVM;
 		}
-		public bool DeleteVM(VM vm) //Возвращаяет сообщение об успехе проведения удаления ВМ
+		public bool DeleteVM(VM vm, string userName) //Возвращаяет сообщение об успехе проведения удаления ВМ
 		{
 			//получение vsms
 			ManagementObject virtualSystemService = null;
@@ -123,7 +129,7 @@ namespace Hyper_v_Web_Controller.Services
 			if (WaitForJob(outParams, virtualSystemService, scope) == null) return false;
 
 			//Удаление каталога с VHDX
-			DirectoryInfo dirInfo = new DirectoryInfo(vm.RealizedVMImage.Path);
+			DirectoryInfo dirInfo = new DirectoryInfo(path + @"/" + userName + @"/" + vm.VmName);
 			if (dirInfo.Exists) dirInfo.Delete(true);				
 						
 			return true;

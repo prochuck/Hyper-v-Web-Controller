@@ -49,12 +49,17 @@ namespace Hyper_v_Web_Controller.Controllers
                 var claimsIdentity = new ClaimsIdentity(claims, "Cookies");
 
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
-                return Redirect(ReturnUrl is null ? "/HyperV/ShowVMs" : ReturnUrl);
+                return Redirect(ReturnUrl is null ? "/" : ReturnUrl);
             }
             return View();
         }
         [HttpGet]
-        public async Task<IActionResult> Logout()
+        public IActionResult Logout()
+        {
+            return View();
+        }
+        [HttpPost]
+        public async Task<IActionResult> Logout(string Void)
         {
             await HttpContext.SignOutAsync();
             return RedirectToAction("Login");
