@@ -18,84 +18,107 @@ namespace Hyper_v_Web_Controller.Services
 		}
 		public VM CreateVM(VMImage vMImage, string machineName) //Возвращаяет созданную ВМ
 		{
-				VMImage userVMimage = null;
-				VM userVM = null;
-				//получение vsms - при наличии vsms удалить
-				ManagementObject virtualSystemService = null;
-				string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-					   "SELECT * FROM {0}", "Msvm_VirtualSystemManagementService");
-				SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-				using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-				using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-				{ virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }
-				ManagementBaseObject inParams = null;
-				ManagementBaseObject outParams = null;
+			VMImage userVMimage = null;
+			VM userVM = null;
 
-				//Импорт штук из виртуалки
-				inParams = virtualSystemService.GetMethodParameters("ImportSystemDefinition");
-				string FilePath = Directory.GetFiles(vMImage.Path + @"\Virtual Machines").Where(e => Path.GetExtension(e).ToLower() == ".vmcx").First();
-				inParams["SystemDefinitionFile"] = FilePath;
-				inParams["SnapshotFolder"] = vMImage.Path + @"\Snapshots";
-				inParams["GenerateNewSystemIdentifier"] = true;
-				outParams = virtualSystemService.InvokeMethod("ImportSystemDefinition", inParams, null);
-				WaitForJob(outParams, virtualSystemService, scope);
-				ManagementObject planVM = new ManagementObject((string)outParams["ImportedSystem"]);
+			//получение vsms - при наличии vsms удалить
+			ManagementObject virtualSystemService = null;
+			string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
+				   "SELECT * FROM {0}", "Msvm_VirtualSystemManagementService");
+			SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
+			using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
+			using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
+			{ virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }
+			ManagementBaseObject inParams = null;
+			ManagementBaseObject outParams = null;
 
-				//Копирование директории ВМ с новым именем
-				userVMimage = new VMImage() { Id = 1, Name = machineName, Path = vMImage.Path.Remove(vMImage.Path.LastIndexOf(@"\" + vMImage.Name))+ @"\" + machineName };
-				userVM = new VM() { Id = 1, VmName = machineName, };
-				System.IO.Directory.CreateDirectory(userVMimage.Path);
-				if (System.IO.Directory.Exists(vMImage.Path + @"\Virtual Hard Disks"))
-				{
-					string[] files = System.IO.Directory.GetFiles(vMImage.Path + @"\Virtual Hard Disks", "*", SearchOption.AllDirectories);
-					// Copy the files and overwrite destination files if they already exist.					
-					foreach (string s in files)
-					{ System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true); }
-				}
-				else return null;
-				
+			//Импорт штук из виртуалки
+			inParams = virtualSystemService.GetMethodParameters("ImportSystemDefinition");
+			string FilePath = Directory.GetFiles(vMImage.Path + @"\Virtual Machines").Where(e => Path.GetExtension(e).ToLower() == ".vmcx").First();
+			inParams["SystemDefinitionFile"] = FilePath;
+			inParams["SnapshotFolder"] = vMImage.Path + @"\Snapshots";
+			inParams["GenerateNewSystemIdentifier"] = true;
+			outParams = virtualSystemService.InvokeMethod("ImportSystemDefinition", inParams, null);
+			WaitForJob(outParams, virtualSystemService, scope);
+			ManagementObject planVM = new ManagementObject((string)outParams["ImportedSystem"]);
 
-				//Изменить путь диска
-				ManagementObject[] disks = planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>().First()
-					 .GetRelated("Msvm_ResourceAllocationSettingData").Cast<ManagementObject>()
-					 .Where(e => e.Properties.Cast<PropertyData>().Where(e2 => e2.Value as string == "Параметры виртуального жесткого диска (Майкрософт).").Count() != 0)
-					 .Select(e => e.GetRelated("Msvm_StorageAllocationSettingData").Cast<ManagementObject>().First()).ToArray();
-				ManagementObject @object = disks[0]; //Вроде бы работает только для одного VHD!!!!
-				@object.SetPropertyValue("HostResource", new string[] { Directory.GetFiles(userVMimage.Path).Where(e => Path.GetExtension(e).ToLower() == ".vhdx").First() });
-				/*string[] DiscToStr = new string[disks.Count()];
-				 for (int i = 0; i < disks.Count(); i++)
-				 {
-					 disks[i].SetPropertyValue("HostResource", new string[] { vMImage.Path + @"\" + machineName + @"\disk" + i}); //Подразумевается, что диски будут названы по шаблону: {disk0, disk1...}
-					 DiscToStr[i] = disks[i].GetText(TextFormat.CimDtd20);
-				 }*/
+			//Копирование директории ВМ с новым именем
+			userVMimage = new VMImage() { Id = 1, Name = machineName, Path = vMImage.Path.Remove(vMImage.Path.LastIndexOf(@"\" + vMImage.Name)) + @"\" + machineName };
+			userVM = new VM() { Id = 1, VmName = machineName, RealizedVMImage = userVMimage};
+			System.IO.Directory.CreateDirectory(userVMimage.Path);
+			if (System.IO.Directory.Exists(vMImage.Path + @"\Virtual Hard Disks"))
+			{
+				string[] files = System.IO.Directory.GetFiles(vMImage.Path + @"\Virtual Hard Disks", "*", SearchOption.AllDirectories);
+				// Copy the files and overwrite destination files if they already exist.					
+				foreach (string s in files)
+				{ System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true); }
+			}
+			else return null;
 
-				//применить изменения пути диска 
-				inParams = virtualSystemService.GetMethodParameters("ModifyResourceSettings");
-				inParams["ResourceSettings"] = new string[] { @object.GetText(TextFormat.CimDtd20) };
-				ManagementBaseObject outt = virtualSystemService.InvokeMethod("ModifyResourceSettings", inParams, null);
-				WaitForJob(outParams, planVM, scope);
+			//Изменить путь диска
+			ManagementObject[] disks = planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>().First()
+				 .GetRelated("Msvm_ResourceAllocationSettingData").Cast<ManagementObject>()
+				 .Where(e => e.Properties.Cast<PropertyData>().Where(e2 => e2.Value as string == "Параметры виртуального жесткого диска (Майкрософт).").Count() != 0)
+				 .Select(e => e.GetRelated("Msvm_StorageAllocationSettingData").Cast<ManagementObject>().First()).ToArray();
+			ManagementObject @object = disks[0]; //Вроде бы работает только для одного VHD!!!!
+			@object.SetPropertyValue("HostResource", new string[] { Directory.GetFiles(userVMimage.Path).Where(e => Path.GetExtension(e).ToLower() == ".vhdx").First() });
+			/*string[] DiscToStr = new string[disks.Count()];
+			 for (int i = 0; i < disks.Count(); i++)
+			 {
+				 disks[i].SetPropertyValue("HostResource", new string[] { vMImage.Path + @"\" + machineName + @"\disk" + i}); //Подразумевается, что диски будут названы по шаблону: {disk0, disk1...}
+				 DiscToStr[i] = disks[i].GetText(TextFormat.CimDtd20);
+			 }*/
 
-				//Измение названия ВМ
-				foreach (ManagementObject VMname in planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>())
-				{
-					VMname.SetPropertyValue("ElementName", machineName);
-					inParams = virtualSystemService.GetMethodParameters("ModifySystemSettings");
-					inParams["SystemSettings"] = VMname.GetText(TextFormat.CimDtd20);
-					ManagementBaseObject outtt = virtualSystemService.InvokeMethod("ModifySystemSettings", inParams, null);
-					WaitForJob(outtt, virtualSystemService, scope);
-				}
+			//применить изменения пути диска 
+			inParams = virtualSystemService.GetMethodParameters("ModifyResourceSettings");
+			inParams["ResourceSettings"] = new string[] { @object.GetText(TextFormat.CimDtd20) };
+			ManagementBaseObject outt = virtualSystemService.InvokeMethod("ModifyResourceSettings", inParams, null);
+			WaitForJob(outParams, planVM, scope);
 
-				//реализация системы
-				inParams = virtualSystemService.GetMethodParameters("RealizePlannedSystem");
-				inParams["PlannedSystem"] = planVM;
-				outParams = virtualSystemService.InvokeMethod("RealizePlannedSystem", inParams, null);
-				WaitForJob(outParams, virtualSystemService, scope);
+			//Измение названия ВМ
+			foreach (ManagementObject VMname in planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>())
+			{
+				VMname.SetPropertyValue("ElementName", machineName);
+				inParams = virtualSystemService.GetMethodParameters("ModifySystemSettings");
+				inParams["SystemSettings"] = VMname.GetText(TextFormat.CimDtd20);
+				ManagementBaseObject outtt = virtualSystemService.InvokeMethod("ModifySystemSettings", inParams, null);
+				WaitForJob(outtt, virtualSystemService, scope);
+			}
 
+			//реализация системы
+			inParams = virtualSystemService.GetMethodParameters("RealizePlannedSystem");
+			inParams["PlannedSystem"] = planVM;
+			outParams = virtualSystemService.InvokeMethod("RealizePlannedSystem", inParams, null);
+			WaitForJob(outParams, virtualSystemService, scope);
 			return userVM;
 		}
 		public bool DeleteVM(VM vm) //Возвращаяет сообщение об успехе проведения удаления ВМ
 		{
-			return false;
+			//получение vsms
+			ManagementObject virtualSystemService = null;
+			string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
+				   "SELECT * FROM {0}", "Msvm_VirtualSystemManagementService");
+			SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
+			using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
+			using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
+			{ virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }
+			ManagementBaseObject inParams = null;
+			ManagementBaseObject outParams = null;
+
+			//Указазание пути до удаляемой ВМ
+			ManagementObject pvm = GetVirtualMachine(vm.VmName, scope);
+			inParams = virtualSystemService.GetMethodParameters("DestroySystem");
+			inParams["AffectedSystem"] = pvm.Path;
+
+			//Удаление ВМ
+			outParams = virtualSystemService.InvokeMethod("DestroySystem", inParams, null);
+			if (WaitForJob(outParams, virtualSystemService, scope) == null) return false;
+
+			//Удаление каталога с VHDX
+			DirectoryInfo dirInfo = new DirectoryInfo(vm.RealizedVMImage.Path);
+			if (dirInfo.Exists) dirInfo.Delete(true);				
+						
+			return true;
 		}
 		public bool CreateSnapshot(VM vm) //Возвращаяет сообщение об успехе создания снимка ВМ
 		{
@@ -161,6 +184,51 @@ namespace Hyper_v_Web_Controller.Services
 			}
 			return serviceObject;
 		}
+		public static ManagementObject GetVirtualMachine(string name, ManagementScope scope)
+		{
+			return GetVmObject(name, "Msvm_ComputerSystem", scope);
+		}
+		private static ManagementObject  GetVmObject(string name,  string className,  ManagementScope scope)
+		{
+			string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
+				"SELECT * FROM {0} WHERE ElementName=\"{1}\"", className, name);
+
+			SelectQuery vmQuery = new SelectQuery(vmQueryWql);
+
+			using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
+			using (ManagementObjectCollection vmCollection = vmSearcher.Get())
+			{
+				if (vmCollection.Count == 0)
+				{
+					throw new ManagementException(string.Format(CultureInfo.CurrentCulture,
+						"No {0} could be found with name \"{1}\"",
+						className,
+						name));
+				}
+
+				//
+				// If multiple virtual machines exist with the requested name, return the first 
+				// one.
+				//
+				ManagementObject vm = GetFirstObjectFromCollection(vmCollection);
+
+				return vm;
+			}
+		}
+		public static ManagementObject GetFirstObjectFromCollection(ManagementObjectCollection collection)
+		{
+			if (collection.Count == 0)
+			{
+				throw new ArgumentException("The collection contains no objects", "collection");
+			}
+
+			foreach (ManagementObject managementObject in collection)
+			{
+				return managementObject;
+			}
+
+			return null;
+		}
 		static ManagementBaseObject WaitForJob(ManagementBaseObject outParams, ManagementObject managementObject, ManagementScope scope)
 		{
 			if ((UInt32)outParams["ReturnValue"] == 4096)
@@ -168,6 +236,7 @@ namespace Hyper_v_Web_Controller.Services
 				if (JobCompleted(outParams, scope))
 				{
 					Console.WriteLine("VM '{0}' were exported successfully.", managementObject["ElementName"]);
+					return outParams;
 				}
 				else
 				{

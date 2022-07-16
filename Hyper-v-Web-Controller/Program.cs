@@ -8,7 +8,7 @@ using Hyper_v_Web_Controller.Domain;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-//builder.Services.AddScoped<IHyperVThing, HyperVThing>();
+builder.Services.AddScoped<IHyperVThing, HyperVThing>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDBContext>(e => e.UseSqlServer(@"Data Source=(local);Database=HyperVWebController;Trusted_Connection=True;"));
 builder.Services.AddTransient<IUserRepository, UserRepository>();
