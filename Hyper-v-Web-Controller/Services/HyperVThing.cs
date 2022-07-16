@@ -10,78 +10,8 @@ namespace Hyper_v_Web_Controller.Services
 		static ManagementScope scope = new ManagementScope(@"\root\virtualization\v2", null); //Путь к API Hyper-V
 		public VMImage[] GetVMImages() //Возвращаяет доступные образы для клонирования
 		{
-			//===============================TEST CODE=======================
-			string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
-						  "SELECT * FROM {0} where ElementName=\"" + "BIB" + "\"", "Msvm_ComputerSystem");
-			SelectQuery vmQuery = new SelectQuery(vmQueryWql);
-
-			using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
-			using (ManagementObjectCollection vmCollection = vmSearcher.Get())
-			{
-				if (vmCollection.Count == 0)
-				{
-					throw new ManagementException(string.Format(CultureInfo.CurrentCulture,   //Переделать!
-						"No {0} could be found with name \"{1}\"",
-						"Msvm_ComputerSystem",
-						"korolko_mint"));
-				}
-				foreach (ManagementObject managementObject in vmCollection)
-				{
-					//получение vsms - при наличии vsms удалить
-					/* ManagementObject virtualSystemService = null;
-					 string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-							"SELECT * FROM {0}", "Msvm_VirtualSystemImportSettingData");
-					 SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-					 using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-					 using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-					 { virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }*/
-
-					ManagementBaseObject inParams = null;
-					ManagementBaseObject outParams = null;
-					ManagementObject virtualSystemService = GetServiceObject(scope, "Msvm_VirtualSystemManagementService");
-					inParams = virtualSystemService.GetMethodParameters("GetDefinitionFileSummaryInformation");//ModifySystemSettings
-					inParams["DefinitionFiles"] = new string[] { @"D:\VM\WIN10BIBcopy\BIB\Virtual Machines\948502C9-09C2-4BB0-A1E3-95E691BFB3CD.vmcx" };
-					outParams = virtualSystemService.InvokeMethod("GetDefinitionFileSummaryInformation", inParams, null);//ModifySystemSettings
-				}
-			}
-			//===============================TEST CODE=======================
 			return null;
 		}
-		//========================
-		public static class ReturnCode
-		{
-			public const UInt32 Completed = 0;
-			public const UInt32 Started = 4096;
-			public const UInt32 Failed = 32768;
-			public const UInt32 AccessDenied = 32769;
-			public const UInt32 NotSupported = 32770;
-			public const UInt32 Unknown = 32771;
-			public const UInt32 Timeout = 32772;
-			public const UInt32 InvalidParameter = 32773;
-			public const UInt32 SystemInUse = 32774;
-			public const UInt32 InvalidState = 32775;
-			public const UInt32 IncorrectDataType = 32776;
-			public const UInt32 SystemNotAvailable = 32777;
-			public const UInt32 OutofMemory = 32778;
-		}
-		public static ManagementObject GetServiceObject(ManagementScope scope, string serviceName)
-		{
-
-			scope.Connect();
-			ManagementPath wmiPath = new ManagementPath(serviceName);
-			ManagementClass serviceClass = new ManagementClass(scope, wmiPath, null);
-			ManagementObjectCollection services = serviceClass.GetInstances();
-
-			ManagementObject serviceObject = null;
-
-			foreach (ManagementObject service in services)
-			{
-				serviceObject = service;
-			}
-			return serviceObject;
-		}
-
-		//=========================
 		public VM[] GetUserVMS(User user) //Возвращаяет ВМ пользователя
 		{
 			return null;
@@ -127,15 +57,15 @@ namespace Hyper_v_Web_Controller.Services
 				ManagementObject planVM = new ManagementObject((string)outParams["ImportedSystem"]);
 
 				//Копирование директории ВМ с новым именем
-				userVMimage = new VMImage() { Id = 1, Name = machineName, Path = vMImage.Path + @"\" + machineName };
-				userVM = new VM() { Id = 1, VmName = machineName, };				
+				userVMimage = new VMImage() { Id = 1, Name = machineName, Path = vMImage.Path.Remove(vMImage.Path.LastIndexOf(@"\" + vMImage.Name))+ @"\" + machineName };
+				userVM = new VM() { Id = 1, VmName = machineName, };
 				System.IO.Directory.CreateDirectory(userVMimage.Path);
 				if (System.IO.Directory.Exists(vMImage.Path))
 				{
-					string[] files = System.IO.Directory.GetFiles(vMImage.Path,"*",SearchOption.AllDirectories);
+					string[] files = System.IO.Directory.GetFiles(vMImage.Path, "*", SearchOption.AllDirectories);
 					// Copy the files and overwrite destination files if they already exist.					
 					foreach (string s in files)
-					{System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true);}
+					{ System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true); }
 				}
 				else
 				{
@@ -148,7 +78,7 @@ namespace Hyper_v_Web_Controller.Services
 					 .Where(e => e.Properties.Cast<PropertyData>().Where(e2 => e2.Value as string == "Параметры виртуального жесткого диска (Майкрософт).").Count() != 0)
 					 .Select(e => e.GetRelated("Msvm_StorageAllocationSettingData").Cast<ManagementObject>().First()).ToArray();
 				ManagementObject @object = disks[0]; //Вроде бы работает только для одного VHD!!!!
-				@object.SetPropertyValue("HostResource", new string[] { vMImage.Path + @"\" + machineName + @"\disk" + 0 + ".vhdx" });
+				@object.SetPropertyValue("HostResource", new string[] { Directory.GetFiles(userVMimage.Path).Where(e => Path.GetExtension(e).ToLower() == ".vhdx").First() });
 				/*string[] DiscToStr = new string[disks.Count()];
 				 for (int i = 0; i < disks.Count(); i++)
 				 {
@@ -158,12 +88,11 @@ namespace Hyper_v_Web_Controller.Services
 
 				//применить изменения пути диска 
 				inParams = virtualSystemService.GetMethodParameters("ModifyResourceSettings");
-				 inParams["ResourceSettings"] = new string[] { @object.GetText(TextFormat.CimDtd20) }; 
-				 ManagementBaseObject outt = virtualSystemService.InvokeMethod("ModifyResourceSettings", inParams, null);
-				 WaitForJob(outParams, planVM, scope);
+				inParams["ResourceSettings"] = new string[] { @object.GetText(TextFormat.CimDtd20) };
+				ManagementBaseObject outt = virtualSystemService.InvokeMethod("ModifyResourceSettings", inParams, null);
+				WaitForJob(outParams, planVM, scope);
 
 				//Измение названия ВМ
-
 				foreach (ManagementObject VMname in planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>())
 				{
 					VMname.SetPropertyValue("ElementName", machineName);
@@ -173,39 +102,85 @@ namespace Hyper_v_Web_Controller.Services
 					WaitForJob(outtt, virtualSystemService, scope);
 				}
 
-
 				//реализация системы
 				inParams = virtualSystemService.GetMethodParameters("RealizePlannedSystem");
 				inParams["PlannedSystem"] = planVM;
 				outParams = virtualSystemService.InvokeMethod("RealizePlannedSystem", inParams, null);
 				WaitForJob(outParams, virtualSystemService, scope);
-
 			}
 
 
 			return userVM;
 		}
-		static string GetConfigOnlyVirtualSystemExportSettingDataInstance(ManagementScope scope)
+		public bool DeleteVM(VM vm) //Возвращаяет сообщение об успехе проведения удаления ВМ
 		{
-			ManagementPath settingPath = new ManagementPath("Msvm_VirtualSystemExportSettingData");
-
-			ManagementClass exportSettingDataClass = new ManagementClass(scope, settingPath, null);
-			ManagementObject exportSettingData = exportSettingDataClass.CreateInstance();
-
-			// Do not copy VHDs and AVHDs but copy the Snapshot configuration and Saved State information (Runtime information) if present
-			exportSettingData["CopySnapshotConfiguration"] = 0;
-			exportSettingData["CopyVmRuntimeInformation"] = true;
-			exportSettingData["CopyVmStorage"] = false;
-			exportSettingData["CreateVmExportSubdirectory"] = true;
-
-			string settingData = exportSettingData.GetText(TextFormat.CimDtd20);
-
-			exportSettingData.Dispose();
-			exportSettingDataClass.Dispose();
-
-			return settingData;
+			return false;
 		}
-		static ManagementBaseObject? WaitForJob(ManagementBaseObject outParams, ManagementObject managementObject, ManagementScope scope)
+		public bool CreateSnapshot(VM vm) //Возвращаяет сообщение об успехе создания снимка ВМ
+		{
+			return false;
+		}
+		public bool RollbackMachine(VM VMToRollback, int snapShotId) //Возвращаяет сообщение об успехе отката ВМ
+		{
+			return false;
+		}
+		public bool TurnOnVM(VM vm) //Возвращаяет сообщение об успехе включения ВМ
+		{
+			return false;
+		}
+		public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
+		{
+			return false;
+		}
+
+		//=================Вспомогательные классы и методы==========================
+
+		static class JobState
+		{
+			public const UInt16 New = 2;
+			public const UInt16 Starting = 3;
+			public const UInt16 Running = 4;
+			public const UInt16 Suspended = 5;
+			public const UInt16 ShuttingDown = 6;
+			public const UInt16 Completed = 7;
+			public const UInt16 Terminated = 8;
+			public const UInt16 Killed = 9;
+			public const UInt16 Exception = 10;
+			public const UInt16 Service = 11;
+		}
+		/*public static class ReturnCode
+		{
+			public const UInt32 Completed = 0;
+			public const UInt32 Started = 4096;
+			public const UInt32 Failed = 32768;
+			public const UInt32 AccessDenied = 32769;
+			public const UInt32 NotSupported = 32770;
+			public const UInt32 Unknown = 32771;
+			public const UInt32 Timeout = 32772;
+			public const UInt32 InvalidParameter = 32773;
+			public const UInt32 SystemInUse = 32774;
+			public const UInt32 InvalidState = 32775;
+			public const UInt32 IncorrectDataType = 32776;
+			public const UInt32 SystemNotAvailable = 32777;
+			public const UInt32 OutofMemory = 32778;
+		}*/
+		public static ManagementObject GetServiceObject(ManagementScope scope, string serviceName)
+		{
+
+			scope.Connect();
+			ManagementPath wmiPath = new ManagementPath(serviceName);
+			ManagementClass serviceClass = new ManagementClass(scope, wmiPath, null);
+			ManagementObjectCollection services = serviceClass.GetInstances();
+
+			ManagementObject serviceObject = null;
+
+			foreach (ManagementObject service in services)
+			{
+				serviceObject = service;
+			}
+			return serviceObject;
+		}
+		static ManagementBaseObject WaitForJob(ManagementBaseObject outParams, ManagementObject managementObject, ManagementScope scope)
 		{
 			if ((UInt32)outParams["ReturnValue"] == 4096)
 			{
@@ -261,38 +236,26 @@ namespace Hyper_v_Web_Controller.Services
 			}
 			return jobCompleted;
 		}
-		public bool DeleteVM(VM vm) //Возвращаяет сообщение об успехе проведения удаления ВМ
+		/*static string GetConfigOnlyVirtualSystemExportSettingDataInstance(ManagementScope scope)
 		{
-			return false;
+			ManagementPath settingPath = new ManagementPath("Msvm_VirtualSystemExportSettingData");
+
+			ManagementClass exportSettingDataClass = new ManagementClass(scope, settingPath, null);
+			ManagementObject exportSettingData = exportSettingDataClass.CreateInstance();
+
+			// Do not copy VHDs and AVHDs but copy the Snapshot configuration and Saved State information (Runtime information) if present
+			exportSettingData["CopySnapshotConfiguration"] = 0;
+			exportSettingData["CopyVmRuntimeInformation"] = true;
+			exportSettingData["CopyVmStorage"] = false;
+			exportSettingData["CreateVmExportSubdirectory"] = true;
+
+			string settingData = exportSettingData.GetText(TextFormat.CimDtd20);
+
+			exportSettingData.Dispose();
+			exportSettingDataClass.Dispose();
+
+			return settingData;
 		}
-		public bool CreateSnapshot(VM vm) //Возвращаяет сообщение об успехе создания снимка ВМ
-		{
-			return false;
-		}
-		public bool RollbackMachine(VM VMToRollback, int snapShotId) //Возвращаяет сообщение об успехе отката ВМ
-		{
-			return false;
-		}
-		public bool TurnOnVM(VM vm) //Возвращаяет сообщение об успехе включения ВМ
-		{
-			return false;
-		}
-		public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
-		{
-			return false;
-		}
-		static class JobState
-		{
-			public const UInt16 New = 2;
-			public const UInt16 Starting = 3;
-			public const UInt16 Running = 4;
-			public const UInt16 Suspended = 5;
-			public const UInt16 ShuttingDown = 6;
-			public const UInt16 Completed = 7;
-			public const UInt16 Terminated = 8;
-			public const UInt16 Killed = 9;
-			public const UInt16 Exception = 10;
-			public const UInt16 Service = 11;
-		}
+		*/
 	}
 }
