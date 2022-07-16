@@ -16,10 +16,11 @@ namespace Hyper_v_Web_Controller.Services
 		{
 			return null;
 		}
-		public VM CreateVM(VMImage vMImage, string machineName) //Возвращаяет созданную ВМ
+		public VM CreateVM(VMImage vMImage, string machineName,string userName) //Возвращаяет созданную ВМ
 		{
 			VMImage userVMimage = null;
 			VM userVM = null;
+
 
 			//получение vsms - при наличии vsms удалить
 			ManagementObject virtualSystemService = null;
@@ -32,6 +33,7 @@ namespace Hyper_v_Web_Controller.Services
 			ManagementBaseObject inParams = null;
 			ManagementBaseObject outParams = null;
 
+
 			//Импорт штук из виртуалки
 			inParams = virtualSystemService.GetMethodParameters("ImportSystemDefinition");
 			string FilePath = Directory.GetFiles(vMImage.Path + @"\Virtual Machines").Where(e => Path.GetExtension(e).ToLower() == ".vmcx").First();
@@ -42,18 +44,21 @@ namespace Hyper_v_Web_Controller.Services
 			WaitForJob(outParams, virtualSystemService, scope);
 			ManagementObject planVM = new ManagementObject((string)outParams["ImportedSystem"]);
 
+
 			//Копирование директории ВМ с новым именем
-			userVMimage = new VMImage() { Id = 1, Name = machineName, Path = vMImage.Path.Remove(vMImage.Path.LastIndexOf(@"\" + vMImage.Name)) + @"\" + machineName };
-			userVM = new VM() { Id = 1, VmName = machineName, RealizedVMImage = userVMimage};
+			userVMimage = new VMImage() { Name = machineName, Path = vMImage.Path +@"\" + vMImage.Name + @"\" + machineName };
+			userVM = new VM() {VmName = machineName, RealizedVMImageId = vMImage.Id};
 			System.IO.Directory.CreateDirectory(userVMimage.Path);
 			if (System.IO.Directory.Exists(vMImage.Path + @"\Virtual Hard Disks"))
 			{
 				string[] files = System.IO.Directory.GetFiles(vMImage.Path + @"\Virtual Hard Disks", "*", SearchOption.AllDirectories);
 				// Copy the files and overwrite destination files if they already exist.					
 				foreach (string s in files)
-				{ System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true); }
+				{ System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true);
+				}
 			}
 			else return null;
+
 
 			//Изменить путь диска
 			ManagementObject[] disks = planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>().First()
@@ -69,11 +74,13 @@ namespace Hyper_v_Web_Controller.Services
 				 DiscToStr[i] = disks[i].GetText(TextFormat.CimDtd20);
 			 }*/
 
+
 			//применить изменения пути диска 
 			inParams = virtualSystemService.GetMethodParameters("ModifyResourceSettings");
 			inParams["ResourceSettings"] = new string[] { @object.GetText(TextFormat.CimDtd20) };
 			ManagementBaseObject outt = virtualSystemService.InvokeMethod("ModifyResourceSettings", inParams, null);
 			WaitForJob(outParams, planVM, scope);
+
 
 			//Измение названия ВМ
 			foreach (ManagementObject VMname in planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>())
@@ -84,6 +91,7 @@ namespace Hyper_v_Web_Controller.Services
 				ManagementBaseObject outtt = virtualSystemService.InvokeMethod("ModifySystemSettings", inParams, null);
 				WaitForJob(outtt, virtualSystemService, scope);
 			}
+
 
 			//реализация системы
 			inParams = virtualSystemService.GetMethodParameters("RealizePlannedSystem");

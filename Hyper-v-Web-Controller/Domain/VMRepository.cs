@@ -8,6 +8,7 @@ namespace Hyper_v_Web_Controller.Domain
     {
         AppDBContext dbContext;
 
+
         public VMRepository(AppDBContext dbContext)
         {
             this.dbContext = dbContext;
@@ -32,6 +33,15 @@ namespace Hyper_v_Web_Controller.Domain
         public IEnumerable<VM> GetList()
         {
             return dbContext.VMs.Include(e => e.Creator).Include(e => e.RealizedVMImage);
+        }
+        /// <summary>
+        /// получает машины пользователя по его id
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        public IEnumerable<VM> GetList(int userId)
+        {
+            return dbContext.VMs.Include(e => e.Creator).Include(e => e.RealizedVMImage).Where(e => e.CreatorId == userId);
         }
 
         public void Save()

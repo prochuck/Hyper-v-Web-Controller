@@ -1,0 +1,9 @@
+﻿@using Hyper_v_Web_Controller.Models
+@model List<VM> 
+ 
+
+@foreach(VM vM in Model)
+{
+    <li>@vM.VmName</li>
+}
+</ul>

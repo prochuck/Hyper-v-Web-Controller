@@ -8,7 +8,6 @@ namespace Hyper_v_Web_Controller.Models
         public int Id { get; set; }
         [Required]
         public string VmName { get; set; }
-        public string Ip { get; set; }
         public DateTime CreationTime { get; set; }
         public int UsageTime { get; set; }
 

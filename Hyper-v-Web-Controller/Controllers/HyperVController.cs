@@ -1,43 +1,65 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Management;
+using Hyper_v_Web_Controller.Interfaces;
+using Hyper_v_Web_Controller.Models;
+using System.Security.Claims;
 
 namespace Hyper_v_Web_Controller.Controllers
 {
-    [ApiController]
+    [Authorize]
     [Route("[controller]/[action]")]
     public class HyperVController : Controller
     {
-        [HttpGet]
-        public string ShowVMs()
+        IVMRepository VMRepository;
+        IVMImageRepository VMRImageepository;
+        IHyperVThing hyperVThing;
+        public HyperVController(IVMRepository vMRepository, IVMImageRepository vMRImageepository, IHyperVThing hyperVThing)
         {
-            string result = "";
-            ManagementScope scope = new ManagementScope(@"\root\virtualization\v2", null);
-            string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
-                        "SELECT * FROM {0}", "Msvm_ComputerSystem");
-
-            SelectQuery vmQuery = new SelectQuery(vmQueryWql);
-
-            using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
-            using (ManagementObjectCollection vmCollection = vmSearcher.Get())
-            {
-                if (vmCollection.Count == 0)
-                {
-                    throw new ManagementException(string.Format(CultureInfo.CurrentCulture,
-                        "No {0} could be found with name \"{1}\"",
-                        "Msvm_ComputerSystem",
-                        "korolko_mint"));
-                }
-
-                ManagementObject vm = null;
-                foreach (ManagementObject managementObject in vmCollection)
-                {
-                    result += managementObject.GetPropertyValue("ElementName");
-                }
-            }
-            return result;
+            this.VMRImageepository = vMRImageepository;
+            this.VMRepository = vMRepository;
+            this.hyperVThing = hyperVThing;
         }
-        
+
+
+
+        [HttpGet]
+        public IActionResult GetVMs()
+        {
+            return View(VMRepository.GetList((int.Parse(HttpContext.User.Claims.Where(e => e.Type == "Id").First().Value))).ToList());
+        }
+        [HttpGet]
+        public IActionResult GetVMImages()
+        {
+            return View(VMRImageepository.GetList().ToList());
+        }
+
+        [HttpGet]
+        public IActionResult CreateVM()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult CreateVM(int imageId,string machineName)
+        {
+            try
+            {
+                VM vM = hyperVThing.CreateVM(VMRImageepository.Get( imageId), machineName, User.Claims.Where(e=>e.Type== ClaimTypes.Name).First().Value);
+                vM.CreatorId = 1;
+                VMRepository.Create(vM);
+                VMRepository.Save();
+                return Ok($"Мащинка по имени {vM.VmName} готова ");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"что-то пошло не так:{ex.Message}");
+                
+            }
+            return View();
+        }
+
+
     }
 }

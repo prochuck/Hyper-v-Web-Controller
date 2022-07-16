@@ -35,19 +35,20 @@ namespace Hyper_v_Web_Controller.Controllers
         public async Task<IActionResult> Login(string login, string password, string? ReturnUrl)
         {
             User user = userRepository.Get(login);
-            
+
             if (!(user is null))
             {
-                if (user.PasswordHash != password.GetHashCode().ToString())
-                    return View("не верный пароль");
-                var claims = new List<Claim> { 
+                // if (user.PasswordHash != password.GetHashCode().ToString())
+                //     return View();
+                var claims = new List<Claim> {
                     new Claim(ClaimTypes.Name, user.Login),
+                     new Claim("Id", user.Id.ToString()),
                     new Claim(ClaimTypes.Role,user.Role.RoleName)
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, "Cookies");
-                
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,new ClaimsPrincipal(claimsIdentity));
+
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
                 return Redirect(ReturnUrl is null ? "/HyperV/ShowVMs" : ReturnUrl);
             }
             return View();
@@ -64,11 +65,10 @@ namespace Hyper_v_Web_Controller.Controllers
         {
             return View();
         }
-
         //переделать хэширование
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public IActionResult RegisterUser(string login, string password,int roleId)
+        public IActionResult RegisterUser(string login, string password, int roleId)
         {
             if (!(userRepository.Get(login) is null))
             {
