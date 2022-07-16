@@ -18,23 +18,8 @@ namespace Hyper_v_Web_Controller.Services
 		}
 		public VM CreateVM(VMImage vMImage, string machineName) //Возвращаяет созданную ВМ
 		{
-			VMImage userVMimage = null;
-			VM userVM = null;
-			string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
-						   "SELECT * FROM {0} where ElementName=\"" + vMImage.Name + "\"", "Msvm_ComputerSystem");
-			SelectQuery vmQuery = new SelectQuery(vmQueryWql);
-
-			using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
-			using (ManagementObjectCollection vmCollection = vmSearcher.Get())
-			{
-				if (vmCollection.Count == 0)
-				{
-					throw new ManagementException(string.Format(CultureInfo.CurrentCulture,   //Переделать!
-						"No {0} could be found with name \"{1}\"",
-						"Msvm_ComputerSystem",
-						"korolko_mint"));
-				}
-
+				VMImage userVMimage = null;
+				VM userVM = null;
 				//получение vsms - при наличии vsms удалить
 				ManagementObject virtualSystemService = null;
 				string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
@@ -60,17 +45,15 @@ namespace Hyper_v_Web_Controller.Services
 				userVMimage = new VMImage() { Id = 1, Name = machineName, Path = vMImage.Path.Remove(vMImage.Path.LastIndexOf(@"\" + vMImage.Name))+ @"\" + machineName };
 				userVM = new VM() { Id = 1, VmName = machineName, };
 				System.IO.Directory.CreateDirectory(userVMimage.Path);
-				if (System.IO.Directory.Exists(vMImage.Path))
+				if (System.IO.Directory.Exists(vMImage.Path + @"\Virtual Hard Disks"))
 				{
-					string[] files = System.IO.Directory.GetFiles(vMImage.Path, "*", SearchOption.AllDirectories);
+					string[] files = System.IO.Directory.GetFiles(vMImage.Path + @"\Virtual Hard Disks", "*", SearchOption.AllDirectories);
 					// Copy the files and overwrite destination files if they already exist.					
 					foreach (string s in files)
 					{ System.IO.File.Copy(s, System.IO.Path.Combine(userVMimage.Path, System.IO.Path.GetFileName(s)), true); }
 				}
-				else
-				{
-					return null;
-				}
+				else return null;
+				
 
 				//Изменить путь диска
 				ManagementObject[] disks = planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>().First()
@@ -107,8 +90,6 @@ namespace Hyper_v_Web_Controller.Services
 				inParams["PlannedSystem"] = planVM;
 				outParams = virtualSystemService.InvokeMethod("RealizePlannedSystem", inParams, null);
 				WaitForJob(outParams, virtualSystemService, scope);
-			}
-
 
 			return userVM;
 		}
