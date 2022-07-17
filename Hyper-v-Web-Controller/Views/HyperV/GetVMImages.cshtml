@@ -1,9 +1,17 @@
 ﻿@using Hyper_v_Web_Controller.Models
-@model List<VMImage> 
- 
+@model List<VMImage>
 
-@foreach(VMImage vM in Model)
+
+
+@foreach (VMImage vM in Model)
 {
-    <li>@vM.Name @vM.Id</li>
+    <li>
+        <form method="post" action="/HyperV/CreateVm">
+            <input readonly type="text" value="@vM.Name"/>
+            <input readonly type="text" name="imageId" value="@vM.Id" />
+            <input type="text" name="machineName" />
+            <input type="submit" value="Создать" />
+        </form>
+    </li>
 }
 </ul>
