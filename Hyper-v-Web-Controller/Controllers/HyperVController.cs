@@ -6,6 +6,7 @@ using System.Management;
 using Hyper_v_Web_Controller.Interfaces;
 using Hyper_v_Web_Controller.Models;
 using System.Security.Claims;
+using Hyper_v_Web_Controller.Services;
 
 namespace Hyper_v_Web_Controller.Controllers
 {
@@ -22,14 +23,24 @@ namespace Hyper_v_Web_Controller.Controllers
             this.VMRepository = vMRepository;
             this.hyperVThing = hyperVThing;
         }
-
-
-
+        [HttpPost]
+        public IActionResult SwitchVMState(int Id)
+        {
+			if (hyperVThing.GetVMState(VMRepository.Get(Id))==VMState.Enabled)
+			{
+                hyperVThing.TurnOffVM(VMRepository.Get(Id));
+            }
+			else
+			{
+                hyperVThing.TurnOnVM(VMRepository.Get(Id));
+            }
+            return Ok();
+        }
         [HttpGet]
         public IActionResult GetVMs()
         {
             return View(VMRepository.GetList((int.Parse(HttpContext.User.Claims.Where(e => e.Type == "Id").First().Value))).ToList());
-        }
+        }        
         [HttpGet]
         public IActionResult GetVMImages()
         {

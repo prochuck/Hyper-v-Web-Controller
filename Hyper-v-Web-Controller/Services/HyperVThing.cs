@@ -5,6 +5,11 @@ using System.Globalization;
 
 namespace Hyper_v_Web_Controller.Services
 {
+	public enum VMState
+	{
+		Enabled=2,
+		Disabled=3
+	}
 	public class HyperVThing : IHyperVThing
 	{
 		string path=null;
@@ -12,6 +17,7 @@ namespace Hyper_v_Web_Controller.Services
         {
 			path = configuration["VMFolder"];
 		}
+		
 		static ManagementScope scope = new ManagementScope(@"\root\virtualization\v2", null); //Путь к API Hyper-V
 		public VMImage[] GetVMImages() //Возвращаяет доступные образы для клонирования
 		{
@@ -142,15 +148,51 @@ namespace Hyper_v_Web_Controller.Services
 		{
 			return false;
 		}
-		public bool TurnOnVM(VM vm) //Возвращаяет сообщение об успехе включения ВМ
+		public string? TurnOnVM(VM vm) //Возвращаяет сообщение об успехе включения ВМ
 		{
-			return false;
+			//получение vsms - при наличии vsms удалить
+			ManagementObject virtualSystem = null;
+			string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
+				   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", vm.VmName);
+			SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
+			using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
+			using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
+			{ virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
+
+			ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
+			inParams["RequestedState"] = VMState.Enabled; 
+			virtualSystem.InvokeMethod("RequestStateChange", inParams, null);			
+			return null;
 		}
 		public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
 		{
-			return false;
-		}
+			//получение vsms - при наличии vsms удалить
+			ManagementObject virtualSystem = null;
+			string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
+				   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", vm.VmName);
+			SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
+			using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
+			using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
+			{ virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
 
+			ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
+			inParams["RequestedState"] = VMState.Disabled; 
+			virtualSystem.InvokeMethod("RequestStateChange", inParams, null);
+			return true;
+		}
+		public VMState GetVMState(VM vm)
+		{
+			//получение vsms - при наличии vsms удалить
+			ManagementObject virtualSystem = null;
+			string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
+				   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", vm.VmName);
+			SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
+			using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
+			using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
+			{ virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }			
+			return (VMState)Convert.ToInt32(virtualSystem["EnabledState"]);
+		}
+		public 
 		//=================Вспомогательные классы и методы==========================
 
 		static class JobState

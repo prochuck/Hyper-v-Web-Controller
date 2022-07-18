@@ -1,4 +1,5 @@
 ﻿using Hyper_v_Web_Controller.Models;
+using Hyper_v_Web_Controller.Services;
 using System.Management;
 
 namespace Hyper_v_Web_Controller.Interfaces
@@ -15,8 +16,8 @@ namespace Hyper_v_Web_Controller.Interfaces
         public bool DeleteVM(VM vm, string userName);
         public bool CreateSnapshot(VM vm);
         public bool RollbackMachine(VM VMToRollback,int snapShotId);
-        public bool TurnOnVM(VM vm);
+        public string? TurnOnVM(VM vm);
         public bool TurnOffVM(VM vm);
-
+        public VMState GetVMState(VM vm);
     }
 }

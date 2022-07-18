@@ -4,6 +4,12 @@
 
 @foreach(VM vM in Model)
 {
-    <li>@vM.VmName</li>
+    @vM.VmName
+    
+    <form method="post" action="/HyperV/SwitchVMState">
+        <input name="Id" value="@vM.Id" hidden="hidden"/>
+        <input type="submit" value="Вкл/Выкл" /> 
+    </form>
+    <p></p>
 }
-</ul>
+<a href="/"><input type="button" value="Вернуться" /></a>
