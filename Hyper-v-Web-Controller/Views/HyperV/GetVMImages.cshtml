@@ -1,17 +1,13 @@
 ﻿@using Hyper_v_Web_Controller.Models
+@using System.Linq
 @model List<VMImage>
 
 
 
-@foreach (VMImage vM in Model)
-{
-    <li>
-        <form method="post" action="/HyperV/CreateVm">
-            <input readonly type="text" value="@vM.Name"/>
-            <input readonly type="text" name="imageId" value="@vM.Id" />
-            <input type="text" name="machineName" />
-            <input type="submit" value="Создать" />
-        </form>
-    </li>
-}
-</ul>
+<li>
+    <form method="post" action="/HyperV/CreateVm">
+        @Html.DropDownList("imageId",new SelectList(@Model,"Id","Name"))
+        <input type="text" name="machineName" />
+        <input type="submit" value="Создать" />
+    </form>
+</li>
