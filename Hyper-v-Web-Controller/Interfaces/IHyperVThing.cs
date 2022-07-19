@@ -10,8 +10,8 @@ namespace Hyper_v_Web_Controller.Interfaces
     /// </summary>
     public interface IHyperVThing
     {       
-        public VMImage[] GetVMImages();
-        public VM[] GetUserVMS(User user);
+  
+        
         public VM CreateVM(VMImage vMImage, string machineName,string userName);
         public bool DeleteVM(VM vm, string userName);
         public bool CreateSnapshot(VM vm);
