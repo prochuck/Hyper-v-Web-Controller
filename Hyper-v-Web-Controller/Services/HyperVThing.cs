@@ -2,6 +2,7 @@
 using Hyper_v_Web_Controller.Models;
 using System.Management;
 using System.Globalization;
+using System.Diagnostics;
 
 namespace Hyper_v_Web_Controller.Services
 {
@@ -146,16 +147,16 @@ namespace Hyper_v_Web_Controller.Services
             //получение vsms - при наличии vsms удалить
             ManagementObject virtualSystem = null;
             string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", vm.VmName);
+                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", "kali");
             SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
             using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
             using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
             { virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
-            /*
+            
             ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
             inParams["RequestedState"] = VMState.Enabled;
             virtualSystem.InvokeMethod("RequestStateChange", inParams, null);
-            */
+            
 
             return GetIpForVM(virtualSystem, scope);
         }
@@ -164,7 +165,7 @@ namespace Hyper_v_Web_Controller.Services
             //получение vsms - при наличии vsms удалить
             ManagementObject virtualSystem = null;
             string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", vm.VmName);
+                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", "kali");
             SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
             using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
             using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
@@ -342,14 +343,32 @@ namespace Hyper_v_Web_Controller.Services
         {
             string ip = null;
 
+            TimeSpan timeOut = TimeSpan.FromSeconds(30);
+
+
             string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
                    "SELECT * FROM {0} where InstanceID like \"Microsoft:GuestNetwork\\\\{1}\\\\%\"", "Msvm_GuestNetworkAdapterConfiguration", vm["Name"]);
             SelectQuery vmQuery = new SelectQuery(vmQueryWql);
+            string managmentPath;
             using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
             using (ManagementObjectCollection vmCollection = vmSearcher.Get())
             {
-                ip = ((string[])vmCollection.Cast<ManagementObject>().First()["IPAddresses"])[0];
+                managmentPath = vmCollection.Cast<ManagementObject>().First().Path.Path;
             }
+            ManagementObject networkAdaper = new ManagementObject(managmentPath);
+            int count =0;
+            do
+            {
+                if (count!=0)
+                    Thread.Sleep(1000);
+                networkAdaper.Get();
+                if (((string[])networkAdaper.GetPropertyValue("IPAddresses")).Count()==2)
+                {
+                    ip = ((string[])networkAdaper.GetPropertyValue("IPAddresses"))[0];
+                }
+                count++;
+            } while (ip is null && TimeSpan.FromSeconds(count)<timeOut);
+
 
             return ip;
 
