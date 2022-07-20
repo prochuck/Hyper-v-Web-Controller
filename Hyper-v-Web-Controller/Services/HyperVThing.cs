@@ -27,14 +27,7 @@ namespace Hyper_v_Web_Controller.Services
             VM userVM = null;
 
 
-            //получение vsms - при наличии vsms удалить
-            ManagementObject virtualSystemService = null;
-            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0}", "Msvm_VirtualSystemManagementService");
-            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-            { virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }
+            ManagementObject virtualSystemService = GetVSMS();
             ManagementBaseObject inParams = null;
             ManagementBaseObject outParams = null;
 
@@ -108,14 +101,7 @@ namespace Hyper_v_Web_Controller.Services
         }
         public bool DeleteVM(VM vm, string userName) //Возвращаяет сообщение об успехе проведения удаления ВМ
         {
-            //получение vsms
-            ManagementObject virtualSystemService = null;
-            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0}", "Msvm_VirtualSystemManagementService");
-            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-            { virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }
+            ManagementObject virtualSystemService = GetVSMS();
             ManagementBaseObject inParams = null;
             ManagementBaseObject outParams = null;
 
@@ -144,34 +130,15 @@ namespace Hyper_v_Web_Controller.Services
         }
         public string? TurnOnVM(VM vm) //Возвращаяет сообщение об успехе включения ВМ
         {
-            //получение vsms - при наличии vsms удалить
-            ManagementObject virtualSystem = null;
-            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", "kali");
-            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-            { virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
-            
+            ManagementObject virtualSystem = GetVS(vm.VmName);
             ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
             inParams["RequestedState"] = VMState.Enabled;
-            virtualSystem.InvokeMethod("RequestStateChange", inParams, null);
-            
-
+            virtualSystem.InvokeMethod("RequestStateChange", inParams, null);            
             return GetIpForVM(virtualSystem, scope);
         }
         public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
         {
-            //получение vsms - при наличии vsms удалить
-            ManagementObject virtualSystem = null;
-            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", "kali");
-            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-            { virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
-
-
+            ManagementObject virtualSystem = GetVS(vm.VmName);
             ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
             inParams["RequestedState"] = VMState.Disabled;
             virtualSystem.InvokeMethod("RequestStateChange", inParams, null);
@@ -179,20 +146,12 @@ namespace Hyper_v_Web_Controller.Services
         }
         public VMState GetVMState(VM vm)
         {
-            //получение vsms - при наличии vsms удалить
-            ManagementObject virtualSystem = null;
-            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", vm.VmName);
-            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-            { virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
+            ManagementObject virtualSystem = GetVS(vm.VmName);
             return (VMState)Convert.ToInt32(virtualSystem["EnabledState"]);
         }
-        public
         //=================Вспомогательные классы и методы==========================
-
-        static class JobState
+                
+        public static class JobState
         {
             public const UInt16 New = 2;
             public const UInt16 Starting = 3;
@@ -205,22 +164,28 @@ namespace Hyper_v_Web_Controller.Services
             public const UInt16 Exception = 10;
             public const UInt16 Service = 11;
         }
-        /*public static class ReturnCode
-		{
-			public const UInt32 Completed = 0;
-			public const UInt32 Started = 4096;
-			public const UInt32 Failed = 32768;
-			public const UInt32 AccessDenied = 32769;
-			public const UInt32 NotSupported = 32770;
-			public const UInt32 Unknown = 32771;
-			public const UInt32 Timeout = 32772;
-			public const UInt32 InvalidParameter = 32773;
-			public const UInt32 SystemInUse = 32774;
-			public const UInt32 InvalidState = 32775;
-			public const UInt32 IncorrectDataType = 32776;
-			public const UInt32 SystemNotAvailable = 32777;
-			public const UInt32 OutofMemory = 32778;
-		}*/
+        public ManagementObject GetVSMS()//получение VSMS
+        {
+            ManagementObject virtualSystemService = null;
+            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
+                   "SELECT * FROM {0}", "Msvm_VirtualSystemManagementService");
+            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
+            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
+            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
+            { virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }
+            return virtualSystemService;
+        }
+        public ManagementObject GetVS (string Vm)//получение vs
+        {
+            ManagementObject virtualSystem = null;
+            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
+                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", Vm);
+            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
+            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
+            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
+            { virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
+            return virtualSystem;
+        }
         public static ManagementObject GetServiceObject(ManagementScope scope, string serviceName)
         {
 

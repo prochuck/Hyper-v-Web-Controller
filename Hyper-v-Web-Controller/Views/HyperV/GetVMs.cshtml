@@ -1,15 +1,24 @@
 ﻿@using Hyper_v_Web_Controller.Models
 @model List<VM> 
  
+<h1>Управление ВМ (включение, выключение, удаление)</h1>
+<p></p>
+<h2>Список ВМ:</h2>
+<p></p>
 
 @foreach(VM vM in Model)
 {
-    @vM.VmName
+    <h3>@vM.VmName </h3>
     
     <form method="post" action="/HyperV/SwitchVMState">
         <input name="Id" value="@vM.Id" hidden="hidden"/>
-        <input type="submit" value="Вкл/Выкл" /> 
+        @if (true)/*Добавить проверку состояния ВМ для отображения*/
+        {
+            
+        }
+        <input type="submit" value="Вкл/Выкл"/> 
     </form>
     <p></p>
 }
+
 <a href="/"><input type="button" value="Вернуться" /></a>
