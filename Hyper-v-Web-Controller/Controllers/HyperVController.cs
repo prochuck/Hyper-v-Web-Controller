@@ -32,10 +32,10 @@ namespace Hyper_v_Web_Controller.Controllers
             }
 			else
 			{
-                hyperVThing.TurnOnVM(VMRepository.Get(Id));
+                return Ok("\n\nПосле подключения к ВПН RDP можно установить соединение с включенной машиной по следующему ip адресу: "+ hyperVThing.TurnOnVM(VMRepository.Get(Id)));
             }
-            return Ok();
-        }
+            return Ok("\n\nВМ выключена");
+        }      
         [HttpGet]
         public IActionResult GetVMs()
         {
@@ -61,7 +61,7 @@ namespace Hyper_v_Web_Controller.Controllers
                 vM.CreatorId = 1;
                 VMRepository.Create(vM);
                 VMRepository.Save();
-                return Ok($"Мащинка по имени {vM.VmName} готова ");
+                return Ok($"ВМ {vM.VmName} создана");
             }
             catch (Exception ex)
             {

@@ -1,6 +1,8 @@
 ﻿@using Hyper_v_Web_Controller.Models
+@using Hyper_v_Web_Controller.Controllers
+@using Hyper_v_Web_Controller.Services
 @model List<VM> 
- 
+
 <h1>Управление ВМ (включение, выключение, удаление)</h1>
 <p></p>
 <h2>Список ВМ:</h2>
@@ -8,14 +10,18 @@
 
 @foreach(VM vM in Model)
 {
-    <h3>@vM.VmName </h3>
-    
+    CheckVmState checkVmState = new CheckVmState();
+    <h3>@vM.VmName <q>@checkVmState.GetVMState(vM)</q></h3>
+    if (checkVmState.GetIpForVM(checkVmState.GetVS(vM.VmName))!=null)
+    {
+        string ip = "Ip для подключения к ВМ: ";
+        @ip;
+        @checkVmState.GetIpForVM(checkVmState.GetVS(vM.VmName));
+        <p></p>
+    }
     <form method="post" action="/HyperV/SwitchVMState">
-        <input name="Id" value="@vM.Id" hidden="hidden"/>
-        @if (true)/*Добавить проверку состояния ВМ для отображения*/
-        {
-            
-        }
+        <input name="Id" value="@vM.Id" hidden="hidden"/>       
+        
         <input type="submit" value="Вкл/Выкл"/> 
     </form>
     <p></p>
