@@ -29,12 +29,14 @@ namespace Hyper_v_Web_Controller.Controllers
 			if (hyperVThing.GetVMState(VMRepository.Get(Id))==VMState.Enabled)
 			{
                 hyperVThing.TurnOffVM(VMRepository.Get(Id));
+                Thread.Sleep(1000);
             }
 			else
 			{
-                return Ok("\n\nПосле подключения к ВПН RDP можно установить соединение с включенной машиной по следующему ip адресу: "+ hyperVThing.TurnOnVM(VMRepository.Get(Id)));
+                hyperVThing.TurnOnVM(VMRepository.Get(Id));
+                return Redirect("/HyperV/GetVMs");
             }
-            return Ok("\n\nВМ выключена");
+            return Redirect("/HyperV/GetVMs");
         }      
         [HttpGet]
         public IActionResult GetVMs()
