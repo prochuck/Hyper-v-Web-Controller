@@ -10,18 +10,17 @@
 
 @foreach(VM vM in Model)
 {
-    CheckVmState checkVmState = new CheckVmState();
-    <h3>@vM.VmName <q>@checkVmState.GetVMState(vM)</q></h3>
-    if (checkVmState.GetIpForVM(checkVmState.GetVS(vM.VmName))!=null)
+
+    <h3>@vM.VmName <q>@vM.machineState.ToString()</q></h3>
+    if (@vM.ip!=null)
     {
         string ip = "Ip для подключения к ВМ: ";
         @ip;
-        @checkVmState.GetIpForVM(checkVmState.GetVS(vM.VmName));
+        @vM.ip;
         <p></p>
     }
     <form method="post" action="/HyperV/SwitchVMState">
         <input name="Id" value="@vM.Id" hidden="hidden"/>       
-        
         <input type="submit" value="Вкл/Выкл"/> 
     </form>
     <p></p>

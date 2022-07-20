@@ -1,4 +1,5 @@
-﻿using Hyper_v_Web_Controller.Models;
+﻿using Hyper_v_Web_Controller.Interfaces;
+using Hyper_v_Web_Controller.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Hyper_v_Web_Controller
@@ -11,7 +12,7 @@ namespace Hyper_v_Web_Controller
         public DbSet<VM> VMs { get; set; }
 
 
-        public AppDBContext(DbContextOptions options, IConfiguration configuration) : base(options)
+        public AppDBContext(DbContextOptions options, IConfiguration configuration,IHyperVThing hyperVThing) : base(options)
         {
             if (Database.EnsureCreated())
             {
@@ -21,9 +22,12 @@ namespace Hyper_v_Web_Controller
                 this.SaveChanges();
             }
             string[] vMImagesNames =Directory.GetDirectories(configuration["VMImagesFolder"]).Select(e=> Path.GetFileName(e)).ToArray();
-
             VMImages.AddRange(vMImagesNames.Except(VMImages.Select(e => e.Name).ToArray())
                 .Select(e => new VMImage() { Name = e, Path = configuration["VMImagesFolder"] + "\\" + e }));
+            VMs.ToList().ForEach(vm => {
+                vm.machineState = hyperVThing.GetVMState(vm);
+                vm.ip= vm.machineState==VMState.Enabled ? hyperVThing.GetIpForVM(vm) : null;
+                });
             this.SaveChanges();
         }
     }

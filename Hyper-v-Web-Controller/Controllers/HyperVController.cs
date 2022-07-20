@@ -26,23 +26,29 @@ namespace Hyper_v_Web_Controller.Controllers
         [HttpPost]
         public IActionResult SwitchVMState(int Id)
         {
-			if (hyperVThing.GetVMState(VMRepository.Get(Id))==VMState.Enabled)
-			{
-                hyperVThing.TurnOffVM(VMRepository.Get(Id));
-                Thread.Sleep(1000);
+            if (hyperVThing.GetVMState(VMRepository.Get(Id)) == VMState.Enabled)
+            {
+                VM vM = VMRepository.Get(Id);
+                hyperVThing.TurnOffVM(vM);
+                vM.machineState = VMState.Disabled;
+                VMRepository.Update(vM);
+                VMRepository.Save();
             }
-			else
-			{
-                hyperVThing.TurnOnVM(VMRepository.Get(Id));
-                return Redirect("/HyperV/GetVMs");
+            else
+            {
+                VM vM = VMRepository.Get(Id);
+                vM.ip= hyperVThing.TurnOnVM(vM);
+                vM.machineState = VMState.Enabled;
+                VMRepository.Update(vM);
+                VMRepository.Save();
             }
             return Redirect("/HyperV/GetVMs");
-        }      
+        }
         [HttpGet]
         public IActionResult GetVMs()
         {
             return View(VMRepository.GetList((int.Parse(HttpContext.User.Claims.Where(e => e.Type == "Id").First().Value))).ToList());
-        }        
+        }
         [HttpGet]
         public IActionResult GetVMImages()
         {
@@ -55,11 +61,14 @@ namespace Hyper_v_Web_Controller.Controllers
             return View();
         }
         [HttpPost]
-        public IActionResult CreateVM(int imageId,string machineName)
+        public IActionResult CreateVM(int imageId, string machineName)
         {
             try
             {
-                VM vM = hyperVThing.CreateVM(VMRImageepository.Get(imageId), machineName, User.Claims.Where(e=>e.Type== ClaimTypes.Name).First().Value);
+                //доделать чтуки с созданием
+                VM vM = hyperVThing.CreateVM(VMRImageepository.Get(imageId), machineName, User.Claims.Where(e => e.Type == ClaimTypes.Name).First().Value);
+               
+                vM.machineState = VMState.Enabled;
                 vM.CreatorId = 1;
                 VMRepository.Create(vM);
                 VMRepository.Save();
@@ -68,7 +77,7 @@ namespace Hyper_v_Web_Controller.Controllers
             catch (Exception ex)
             {
                 return BadRequest($"что-то пошло не так:{ex.Message}");
-                
+
             }
             return View();
         }

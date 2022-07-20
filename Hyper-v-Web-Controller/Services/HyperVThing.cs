@@ -6,63 +6,7 @@ using System.Diagnostics;
 
 namespace Hyper_v_Web_Controller.Services
 {
-    public enum VMState
-    {
-        Enabled = 2,
-        Disabled = 3
-    }
-    public class CheckVmState
-	{        
-        static ManagementScope scope = new ManagementScope(@"\root\virtualization\v2", null); //Путь к API Hyper-V
-
-        public VMState GetVMState(VM vm)
-        {
-            ManagementObject virtualSystem = GetVS(vm.VmName);
-            return (VMState)Convert.ToInt32(virtualSystem["EnabledState"]);
-        }
-        public ManagementObject GetVS(string Vm)//получение vs
-        {
-            ManagementObject virtualSystem = null;
-            string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where ElementName=\"{1}\"", "Msvm_ComputerSystem", Vm);
-            SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
-            using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
-            using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-            { virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
-            return virtualSystem;
-        }
-        public string GetIpForVM(ManagementObject vm)
-        {
-            string ip = null;
-
-            TimeSpan timeOut = TimeSpan.FromSeconds(30);
-
-
-            string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where InstanceID like \"Microsoft:GuestNetwork\\\\{1}\\\\%\"", "Msvm_GuestNetworkAdapterConfiguration", vm["Name"]);
-            SelectQuery vmQuery = new SelectQuery(vmQueryWql);
-            string managmentPath;
-            using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
-            using (ManagementObjectCollection vmCollection = vmSearcher.Get())
-            {
-                managmentPath = vmCollection.Cast<ManagementObject>().First().Path.Path;
-            }
-            ManagementObject networkAdaper = new ManagementObject(managmentPath);
-            
-                   
-                networkAdaper.Get();
-                if (((string[])networkAdaper.GetPropertyValue("IPAddresses")).Count() == 2)
-                {
-                    ip = ((string[])networkAdaper.GetPropertyValue("IPAddresses"))[0];
-                }
-                
-            
-
-
-            return ip;
-
-        }
-    }
+    
     public class HyperVThing : IHyperVThing
     {
         string path = null;
@@ -186,7 +130,7 @@ namespace Hyper_v_Web_Controller.Services
             ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
             inParams["RequestedState"] = VMState.Enabled;
             virtualSystem.InvokeMethod("RequestStateChange", inParams, null);            
-            return GetIpForVM(virtualSystem, scope);
+            return GetIpForVM(virtualSystem, scope,30);
         }
         public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
         {
@@ -356,11 +300,15 @@ namespace Hyper_v_Web_Controller.Services
             }
             return jobCompleted;
         }
-        static string GetIpForVM(ManagementObject vm, ManagementScope scope)
+        public string GetIpForVM(VM vM)
+        {
+            return GetIpForVM( this.GetVS(vM.VmName), scope, 3);
+        }
+        static string GetIpForVM(ManagementObject vm, ManagementScope scope,int timeOutTime)
         {
             string ip = null;
 
-            TimeSpan timeOut = TimeSpan.FromSeconds(30);
+            TimeSpan timeOut = TimeSpan.FromSeconds(timeOutTime);
 
 
             string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
