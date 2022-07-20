@@ -26,7 +26,7 @@ namespace Hyper_v_Web_Controller.Models
         public int RealizedVMImageId { get; set; }
         public VMImage RealizedVMImage { get; set; }
         public VMState machineState { get; set; } = VMState.Disabled;
-        public string ip { get; set; } = null;
+        public string? ip { get; set; } = null;
 
     }
 }
