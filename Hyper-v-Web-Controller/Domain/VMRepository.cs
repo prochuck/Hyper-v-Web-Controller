@@ -32,7 +32,20 @@ namespace Hyper_v_Web_Controller.Domain
             vM.machineState = hyperVThing.GetVMState(vM);
             if (vM.machineState == VMState.Enabled)
             {
-                vM.ip = hyperVThing.GetIpForVM(vM);
+                vM.machineState = hyperVThing.GetVMState(vM);
+                string ip = null;
+                if (vM.machineState == VMState.Enabled)
+                {
+                    ip = hyperVThing.GetIpForVM(vM, 1);
+                    if (ip is null)
+                    {
+                        vM.machineState = VMState.Starting;
+                    }
+                    else
+                    {
+                        vM.ip = ip;
+                    }
+                }
             }
             return vM;
         }
@@ -43,9 +56,18 @@ namespace Hyper_v_Web_Controller.Domain
             foreach(VM vM in vMs)
             {
                 vM.machineState = hyperVThing.GetVMState(vM);
+                string ip = null;
                 if (vM.machineState == VMState.Enabled)
                 {
-                    vM.ip = hyperVThing.GetIpForVM(vM);
+                    ip = hyperVThing.GetIpForVM(vM,1);
+                    if (ip is null)
+                    {
+                        vM.machineState = VMState.Starting;
+                    }
+                    else
+                    {
+                        vM.ip=ip;
+                    }
                 }
             }
             
@@ -63,9 +85,18 @@ namespace Hyper_v_Web_Controller.Domain
             foreach (VM vM in vMs)
             {
                 vM.machineState = hyperVThing.GetVMState(vM);
+                string ip = null;
                 if (vM.machineState == VMState.Enabled)
                 {
-                    vM.ip = hyperVThing.GetIpForVM(vM);
+                    ip = hyperVThing.GetIpForVM(vM, 1);
+                    if (ip is null)
+                    {
+                        vM.machineState = VMState.Starting;
+                    }
+                    else
+                    {
+                        vM.ip = ip;
+                    }
                 }
             }
             return vMs;

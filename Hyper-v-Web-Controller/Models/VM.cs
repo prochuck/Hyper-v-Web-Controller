@@ -5,6 +5,7 @@ namespace Hyper_v_Web_Controller.Models
 {
     public enum VMState
     {
+        Starting =-1,
         Creating = 0,
         Enabled = 2,
         Disabled = 3,

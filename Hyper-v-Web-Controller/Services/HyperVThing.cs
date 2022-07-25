@@ -311,9 +311,9 @@ namespace Hyper_v_Web_Controller.Services
         }
         return jobCompleted;
     }
-    public string GetIpForVM(VM vM)
+    public string GetIpForVM(VM vM, int timeOut)
     {
-        return GetIpForVM(this.GetVS(vM.VmName), scope, 3).Result;
+        return GetIpForVM(this.GetVS(vM.VmName), scope, timeOut).Result;
     }
     static async Task<string> GetIpForVM(ManagementObject vm, ManagementScope scope, int timeOutTime)
     {

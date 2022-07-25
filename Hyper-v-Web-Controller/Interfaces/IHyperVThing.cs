@@ -19,6 +19,6 @@ namespace Hyper_v_Web_Controller.Interfaces
         public string? TurnOnVM(VM vm);
         public bool TurnOffVM(VM vm);
         public VMState GetVMState(VM vm);
-        public string GetIpForVM(VM vM);
+        public string GetIpForVM(VM vM, int timeOut);
     }
 }
