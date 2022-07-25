@@ -20,10 +20,20 @@
         <p></p>
     }
     <form method="post" action="/HyperV/SwitchVMState">
-        <input name="Id" value="@vM.Id" hidden="hidden"/>       
-        <input type="submit" value="Вкл/Выкл"/> 
+        <input name="Id" value="@vM.Id" hidden="hidden"/>    
+        @if (!(@vM.machineState==VMState.Creating))
+        {
+            if (@vM.machineState==VMState.Disabled)
+            {
+                <input type="submit" value="Включить ВМ"/> 
+            }else
+            {
+                <input type="submit" value="Выключить ВМ"/> 
+            }
+            
+        }       
     </form>
     <p></p>
 }
 
-<a href="/"><input type="button" value="Вернуться" /></a>
+<a href="/"><input type="button" value="Вернуться" /></a><a href="/HyperV/GetVMs"><input type="button" value="Обновить список" /></a>

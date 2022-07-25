@@ -7,7 +7,8 @@ namespace Hyper_v_Web_Controller.Models
     {
         Creating = 0,
         Enabled = 2,
-        Disabled = 3
+        Disabled = 3,
+        Disabling = 4
     }
     public class VM
     {
