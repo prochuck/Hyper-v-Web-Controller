@@ -17,10 +17,10 @@ namespace Hyper_v_Web_Controller.Services
 
         static ManagementScope scope = new ManagementScope(@"\root\virtualization\v2", null); //Путь к API Hyper-V
 
-        public VM CreateVM(VMImage vMImage, string machineName, string userName) //Возвращаяет созданную ВМ
+        public void CreateVM(VMImage vMImage, VM vM, string userName) //Возвращаяет созданную ВМ
         {
             //VMImage userVMimage = null;
-            VM userVM = null;
+
 
 
             ManagementObject virtualSystemService = GetVSMS();
@@ -41,18 +41,18 @@ namespace Hyper_v_Web_Controller.Services
 
             //Копирование директории ВМ с новым именем
             //userVMimage = new VMImage() { Name = machineName, Path = vMImage.Path +@"\" + vMImage.Name + @"\" + machineName };
-            userVM = new VM() { VmName = machineName, RealizedVMImageId = vMImage.Id };
-            if (!System.IO.Directory.Exists(path + @"\" + userName + @"\" + machineName))
-                System.IO.Directory.CreateDirectory(path + @"\" + userName + @"\" + machineName);
-            else return null;
+
+            if (!System.IO.Directory.Exists(path + @"\" + userName + @"\" + vM.VmName))
+                System.IO.Directory.CreateDirectory(path + @"\" + userName + @"\" + vM.VmName);
+            else throw (new Exception("Путь занят"));
             if (System.IO.Directory.Exists(vMImage.Path + @"\Virtual Hard Disks"))
             {
                 string[] files = System.IO.Directory.GetFiles(vMImage.Path + @"\Virtual Hard Disks", "*", SearchOption.AllDirectories);
                 // Copy the files and overwrite destination files if they already exist.					
                 foreach (string s in files)
-                    System.IO.File.Copy(s, System.IO.Path.Combine(path + @"\" + userName + @"\" + machineName, System.IO.Path.GetFileName(s)), true);
+                    System.IO.File.Copy(s, System.IO.Path.Combine(path + @"\" + userName + @"\" + vM.VmName, System.IO.Path.GetFileName(s)), true);
             }
-            else return null;
+            else throw (new Exception("Что-то с файлами пошло не так"));
 
 
             //Изменить путь диска
@@ -61,7 +61,7 @@ namespace Hyper_v_Web_Controller.Services
                  .Where(e => e.Properties.Cast<PropertyData>().Where(e2 => e2.Value as string == "Параметры виртуального жесткого диска (Майкрософт).").Count() != 0)
                  .Select(e => e.GetRelated("Msvm_StorageAllocationSettingData").Cast<ManagementObject>().First()).ToArray();
             ManagementObject @object = disks[0]; //Вроде бы работает только для одного VHD!!!!
-            @object.SetPropertyValue("HostResource", new string[] { Directory.GetFiles(path + @"\" + userName + @"\" + machineName).Where(e => Path.GetExtension(e).ToLower() == ".vhdx").First() });
+            @object.SetPropertyValue("HostResource", new string[] { Directory.GetFiles(path + @"\" + userName + @"\" + vM.VmName).Where(e => Path.GetExtension(e).ToLower() == ".vhdx").First() });
             /*string[] DiscToStr = new string[disks.Count()];
 			 for (int i = 0; i < disks.Count(); i++)
 			 {
@@ -80,7 +80,7 @@ namespace Hyper_v_Web_Controller.Services
             //Измение названия ВМ
             foreach (ManagementObject VMname in planVM.GetRelated("Msvm_VirtualSystemSettingData").Cast<ManagementObject>())
             {
-                VMname.SetPropertyValue("ElementName", machineName);
+                VMname.SetPropertyValue("ElementName", vM.VmName);
                 inParams = virtualSystemService.GetMethodParameters("ModifySystemSettings");
                 inParams["SystemSettings"] = VMname.GetText(TextFormat.CimDtd20);
                 ManagementBaseObject outtt = virtualSystemService.InvokeMethod("ModifySystemSettings", inParams, null);
@@ -93,7 +93,6 @@ namespace Hyper_v_Web_Controller.Services
             inParams["PlannedSystem"] = planVM;
             outParams = virtualSystemService.InvokeMethod("RealizePlannedSystem", inParams, null);
             WaitForJob(outParams, virtualSystemService, scope);
-            return userVM;
         }
         public bool DeleteVM(VM vm, string userName) //Возвращаяет сообщение об успехе проведения удаления ВМ
         {
@@ -130,7 +129,7 @@ namespace Hyper_v_Web_Controller.Services
             ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
             inParams["RequestedState"] = VMState.Enabled;
             virtualSystem.InvokeMethod("RequestStateChange", inParams, null);            
-            return GetIpForVM(virtualSystem, scope,30);
+            return GetIpForVM(virtualSystem, scope,30).Result;
         }
         public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
         {
@@ -247,7 +246,7 @@ namespace Hyper_v_Web_Controller.Services
         {
             if ((UInt32)outParams["ReturnValue"] == 4096)
             {
-                if (JobCompleted(outParams, scope))
+                if (JobCompleted(outParams, scope).Result)
                 {
                     Console.WriteLine("VM '{0}' were exported successfully.", managementObject["ElementName"]);
                     return outParams;
@@ -272,7 +271,7 @@ namespace Hyper_v_Web_Controller.Services
             }
             return null;
         }
-        static bool JobCompleted(ManagementBaseObject outParams, ManagementScope scope)
+        static async Task<bool> JobCompleted(ManagementBaseObject outParams, ManagementScope scope)
         {
             bool jobCompleted = true;
 
@@ -285,7 +284,8 @@ namespace Hyper_v_Web_Controller.Services
                 || (UInt16)Job["JobState"] == JobState.Running)
             {
                 Console.WriteLine("In progress... {0}% completed.", Job["PercentComplete"]);
-                System.Threading.Thread.Sleep(1000);
+
+                await Task.Delay(1000);
                 Job.Get();
             }
 
@@ -302,9 +302,9 @@ namespace Hyper_v_Web_Controller.Services
         }
         public string GetIpForVM(VM vM)
         {
-            return GetIpForVM( this.GetVS(vM.VmName), scope, 3);
+            return GetIpForVM( this.GetVS(vM.VmName), scope, 3).Result;
         }
-        static string GetIpForVM(ManagementObject vm, ManagementScope scope,int timeOutTime)
+        static async Task<string> GetIpForVM(ManagementObject vm, ManagementScope scope,int timeOutTime)
         {
             string ip = null;
 
@@ -324,8 +324,8 @@ namespace Hyper_v_Web_Controller.Services
             int count =0;
             do
             {
-                if (count!=0)
-                    Thread.Sleep(1000);
+                if (count != 0)
+                    await Task.Delay(1000);
                 networkAdaper.Get();
                 if (((string[])networkAdaper.GetPropertyValue("IPAddresses")).Count()==2)
                 {

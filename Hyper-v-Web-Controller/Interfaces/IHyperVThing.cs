@@ -12,7 +12,7 @@ namespace Hyper_v_Web_Controller.Interfaces
     {       
   
         
-        public VM CreateVM(VMImage vMImage, string machineName,string userName);
+        public void CreateVM(VMImage vMImage, VM vm,string userName);
         public bool DeleteVM(VM vm, string userName);
         public bool CreateSnapshot(VM vm);
         public bool RollbackMachine(VM VMToRollback,int snapShotId);

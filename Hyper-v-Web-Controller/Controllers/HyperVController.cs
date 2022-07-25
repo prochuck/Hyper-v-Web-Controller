@@ -37,7 +37,7 @@ namespace Hyper_v_Web_Controller.Controllers
             else
             {
                 VM vM = VMRepository.Get(Id);
-                vM.ip= hyperVThing.TurnOnVM(vM);
+                vM.ip = hyperVThing.TurnOnVM(vM);
                 vM.machineState = VMState.Enabled;
                 VMRepository.Update(vM);
                 VMRepository.Save();
@@ -65,14 +65,35 @@ namespace Hyper_v_Web_Controller.Controllers
         {
             try
             {
+                VMImage vMImage = VMRImageepository.Get(imageId);
+                string userName = User.Claims.Where(e => e.Type == ClaimTypes.Name).First().Value;
+                string vmName = $"{vMImage.Name}-{userName}-{machineName}";
                 //доделать чтуки с созданием
-                VM vM = hyperVThing.CreateVM(VMRImageepository.Get(imageId), machineName, User.Claims.Where(e => e.Type == ClaimTypes.Name).First().Value);
-               
-                vM.machineState = VMState.Enabled;
-                vM.CreatorId = 1;
+                VM vM = new VM()
+                {
+                    RealizedVMImageId = imageId,
+                    CreatorId = int.Parse(User.Claims.Where(e => e.Type == "Id").First().Value),
+                    VmName = vmName,
+                    machineState = VMState.Creating
+                };
                 VMRepository.Create(vM);
                 VMRepository.Save();
-                return Ok($"ВМ {vM.VmName} создана");
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        hyperVThing.CreateVM(vMImage, vM, userName);
+                        vM.machineState= VMState.Enabled;
+                        VMRepository.Update(vM);
+                        VMRepository.Save();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                });
+                
+                return Ok($"ВМ {vM.VmName} создаётся");
             }
             catch (Exception ex)
             {
@@ -81,6 +102,7 @@ namespace Hyper_v_Web_Controller.Controllers
             }
             return View();
         }
+
 
 
     }
