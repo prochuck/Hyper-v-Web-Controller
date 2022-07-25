@@ -23,12 +23,12 @@
         <input name="Id" value="@vM.Id" hidden="hidden"/>    
         @if (!(@vM.machineState==VMState.Creating))
         {
-            if (@vM.machineState==VMState.Disabled)
+            if (@vM.machineState==VMState.Disabled||@vM.machineState==VMState.Disabling)
             {
                 <input type="submit" value="Включить ВМ"/> 
-            }else
+            }else if (@vM.machineState==VMState.Enabled)           
             {
-                <input type="submit" value="Выключить ВМ"/> 
+                <input type="submit" value="Выключить ВМ"/>                 
             }
             
         }       
