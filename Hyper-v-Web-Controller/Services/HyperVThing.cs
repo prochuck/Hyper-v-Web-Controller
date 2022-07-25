@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace Hyper_v_Web_Controller.Services
 {
-    
+
     public class HyperVThing : IHyperVThing
     {
         string path = null;
@@ -128,8 +128,8 @@ namespace Hyper_v_Web_Controller.Services
             ManagementObject virtualSystem = GetVS(vm.VmName);
             ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
             inParams["RequestedState"] = VMState.Enabled;
-            virtualSystem.InvokeMethod("RequestStateChange", inParams, null);            
-            return GetIpForVM(virtualSystem, scope,30).Result;
+            virtualSystem.InvokeMethod("RequestStateChange", inParams, null);
+            return GetIpForVM(virtualSystem, scope, 30).Result;
         }
         public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
         {
@@ -142,10 +142,14 @@ namespace Hyper_v_Web_Controller.Services
         public VMState GetVMState(VM vm)
         {
             ManagementObject virtualSystem = GetVS(vm.VmName);
+            if (virtualSystem is null)
+            {
+                return VMState.Creating;
+            }
             return (VMState)Convert.ToInt32(virtualSystem["EnabledState"]);
         }
         //=================Вспомогательные классы и методы==========================
-                
+
         public static class JobState
         {
             public const UInt16 New = 2;
@@ -170,7 +174,7 @@ namespace Hyper_v_Web_Controller.Services
             { virtualSystemService = vmCollection2.Cast<ManagementObject>().First(); }
             return virtualSystemService;
         }
-        public ManagementObject GetVS (string Vm)//получение vs
+        public ManagementObject GetVS(string Vm)//получение vs
         {
             ManagementObject virtualSystem = null;
             string vmQueryWql2 = string.Format(CultureInfo.InvariantCulture,
@@ -178,188 +182,195 @@ namespace Hyper_v_Web_Controller.Services
             SelectQuery vmQuery2 = new SelectQuery(vmQueryWql2);
             using (ManagementObjectSearcher vmSearcher2 = new ManagementObjectSearcher(scope, vmQuery2))
             using (ManagementObjectCollection vmCollection2 = vmSearcher2.Get())
-            { virtualSystem = vmCollection2.Cast<ManagementObject>().First(); }
-            return virtualSystem;
-        }
-        public static ManagementObject GetServiceObject(ManagementScope scope, string serviceName)
-        {
-
-            scope.Connect();
-            ManagementPath wmiPath = new ManagementPath(serviceName);
-            ManagementClass serviceClass = new ManagementClass(scope, wmiPath, null);
-            ManagementObjectCollection services = serviceClass.GetInstances();
-
-            ManagementObject serviceObject = null;
-
-            foreach (ManagementObject service in services)
             {
-                serviceObject = service;
-            }
-            return serviceObject;
-        }
-        public static ManagementObject GetVirtualMachine(string name, ManagementScope scope)
-        {
-            return GetVmObject(name, "Msvm_ComputerSystem", scope);
-        }
-        private static ManagementObject GetVmObject(string name, string className, ManagementScope scope)
-        {
-            string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
-                "SELECT * FROM {0} WHERE ElementName=\"{1}\"", className, name);
-
-            SelectQuery vmQuery = new SelectQuery(vmQueryWql);
-
-            using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
-            using (ManagementObjectCollection vmCollection = vmSearcher.Get())
-            {
-                if (vmCollection.Count == 0)
-                {
-                    throw new ManagementException(string.Format(CultureInfo.CurrentCulture,
-                        "No {0} could be found with name \"{1}\"",
-                        className,
-                        name));
-                }
-
-                //
-                // If multiple virtual machines exist with the requested name, return the first 
-                // one.
-                //
-                ManagementObject vm = GetFirstObjectFromCollection(vmCollection);
-
-                return vm;
-            }
-        }
-        public static ManagementObject GetFirstObjectFromCollection(ManagementObjectCollection collection)
-        {
-            if (collection.Count == 0)
-            {
-                throw new ArgumentException("The collection contains no objects", "collection");
-            }
-
-            foreach (ManagementObject managementObject in collection)
-            {
-                return managementObject;
-            }
-
-            return null;
-        }
-        static ManagementBaseObject WaitForJob(ManagementBaseObject outParams, ManagementObject managementObject, ManagementScope scope)
-        {
-            if ((UInt32)outParams["ReturnValue"] == 4096)
-            {
-                if (JobCompleted(outParams, scope).Result)
-                {
-                    Console.WriteLine("VM '{0}' were exported successfully.", managementObject["ElementName"]);
-                    return outParams;
-                }
-                else
+                if (vmCollection2.Count==0)
                 {
                     return null;
-                    Console.WriteLine("Failed to export VM");
                 }
+                virtualSystem = vmCollection2.Cast<ManagementObject>().First();
             }
-            else if ((UInt32)outParams["ReturnValue"] == 0)
-            {
+        
+            return virtualSystem;
+        }
+    public static ManagementObject GetServiceObject(ManagementScope scope, string serviceName)
+    {
 
+        scope.Connect();
+        ManagementPath wmiPath = new ManagementPath(serviceName);
+        ManagementClass serviceClass = new ManagementClass(scope, wmiPath, null);
+        ManagementObjectCollection services = serviceClass.GetInstances();
+
+        ManagementObject serviceObject = null;
+
+        foreach (ManagementObject service in services)
+        {
+            serviceObject = service;
+        }
+        return serviceObject;
+    }
+    public static ManagementObject GetVirtualMachine(string name, ManagementScope scope)
+    {
+        return GetVmObject(name, "Msvm_ComputerSystem", scope);
+    }
+    private static ManagementObject GetVmObject(string name, string className, ManagementScope scope)
+    {
+        string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
+            "SELECT * FROM {0} WHERE ElementName=\"{1}\"", className, name);
+
+        SelectQuery vmQuery = new SelectQuery(vmQueryWql);
+
+        using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
+        using (ManagementObjectCollection vmCollection = vmSearcher.Get())
+        {
+            if (vmCollection.Count == 0)
+            {
+                throw new ManagementException(string.Format(CultureInfo.CurrentCulture,
+                    "No {0} could be found with name \"{1}\"",
+                    className,
+                    name));
+            }
+
+            //
+            // If multiple virtual machines exist with the requested name, return the first 
+            // one.
+            //
+            ManagementObject vm = GetFirstObjectFromCollection(vmCollection);
+
+            return vm;
+        }
+    }
+    public static ManagementObject GetFirstObjectFromCollection(ManagementObjectCollection collection)
+    {
+        if (collection.Count == 0)
+        {
+            throw new ArgumentException("The collection contains no objects", "collection");
+        }
+
+        foreach (ManagementObject managementObject in collection)
+        {
+            return managementObject;
+        }
+
+        return null;
+    }
+    static ManagementBaseObject WaitForJob(ManagementBaseObject outParams, ManagementObject managementObject, ManagementScope scope)
+    {
+        if ((UInt32)outParams["ReturnValue"] == 4096)
+        {
+            if (JobCompleted(outParams, scope).Result)
+            {
                 Console.WriteLine("VM '{0}' were exported successfully.", managementObject["ElementName"]);
                 return outParams;
             }
             else
             {
-
-                Console.WriteLine("Export virtual system failed with error:{0}", outParams["ReturnValue"]);
                 return null;
+                Console.WriteLine("Failed to export VM");
             }
+        }
+        else if ((UInt32)outParams["ReturnValue"] == 0)
+        {
+
+            Console.WriteLine("VM '{0}' were exported successfully.", managementObject["ElementName"]);
+            return outParams;
+        }
+        else
+        {
+
+            Console.WriteLine("Export virtual system failed with error:{0}", outParams["ReturnValue"]);
             return null;
         }
-        static async Task<bool> JobCompleted(ManagementBaseObject outParams, ManagementScope scope)
-        {
-            bool jobCompleted = true;
-
-            //Retrieve msvc_StorageJob path. This is a full wmi path
-            string JobPath = (string)outParams["Job"];
-            ManagementObject Job = new ManagementObject(scope, new ManagementPath(JobPath), null);
-            //Try to get storage job information
-            Job.Get();
-            while ((UInt16)Job["JobState"] == JobState.Starting
-                || (UInt16)Job["JobState"] == JobState.Running)
-            {
-                Console.WriteLine("In progress... {0}% completed.", Job["PercentComplete"]);
-
-                await Task.Delay(1000);
-                Job.Get();
-            }
-
-            //Figure out if job failed
-            UInt16 jobState = (UInt16)Job["JobState"];
-            if (jobState != JobState.Completed)
-            {
-                UInt16 jobErrorCode = (UInt16)Job["ErrorCode"];
-                Console.WriteLine("Error Code:{0}", jobErrorCode);
-                Console.WriteLine("ErrorDescription: {0}", (string)Job["ErrorDescription"]);
-                jobCompleted = false;
-            }
-            return jobCompleted;
-        }
-        public string GetIpForVM(VM vM)
-        {
-            return GetIpForVM( this.GetVS(vM.VmName), scope, 3).Result;
-        }
-        static async Task<string> GetIpForVM(ManagementObject vm, ManagementScope scope,int timeOutTime)
-        {
-            string ip = null;
-
-            TimeSpan timeOut = TimeSpan.FromSeconds(timeOutTime);
-
-
-            string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
-                   "SELECT * FROM {0} where InstanceID like \"Microsoft:GuestNetwork\\\\{1}\\\\%\"", "Msvm_GuestNetworkAdapterConfiguration", vm["Name"]);
-            SelectQuery vmQuery = new SelectQuery(vmQueryWql);
-            string managmentPath;
-            using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
-            using (ManagementObjectCollection vmCollection = vmSearcher.Get())
-            {
-                managmentPath = vmCollection.Cast<ManagementObject>().First().Path.Path;
-            }
-            ManagementObject networkAdaper = new ManagementObject(managmentPath);
-            int count =0;
-            do
-            {
-                if (count != 0)
-                    await Task.Delay(1000);
-                networkAdaper.Get();
-                if (((string[])networkAdaper.GetPropertyValue("IPAddresses")).Count()==2)
-                {
-                    ip = ((string[])networkAdaper.GetPropertyValue("IPAddresses"))[0];
-                }
-                count++;
-            } while (ip is null && TimeSpan.FromSeconds(count)<timeOut);
-
-
-            return ip;
-
-        }
-
-
-        /*static string GetConfigOnlyVirtualSystemExportSettingDataInstance(ManagementScope scope)
-		{
-			ManagementPath settingPath = new ManagementPath("Msvm_VirtualSystemExportSettingData");
-
-			ManagementClass exportSettingDataClass = new ManagementClass(scope, settingPath, null);
-			ManagementObject exportSettingData = exportSettingDataClass.CreateInstance();
-
-			// Do not copy VHDs and AVHDs but copy the Snapshot configuration and Saved State information (Runtime information) if present
-			exportSettingData["CopySnapshotConfiguration"] = 0;
-			exportSettingData["CopyVmRuntimeInformation"] = true;
-			exportSettingData["CopyVmStorage"] = false;
-			exportSettingData["CreateVmExportSubdirectory"] = true;
-
-			string settingData = exportSettingData.GetText(TextFormat.CimDtd20);
-
-			exportSettingData.Dispose();
-			exportSettingDataClass.Dispose();
-
-			return settingData;
-		}
-		*/
+        return null;
     }
+    static async Task<bool> JobCompleted(ManagementBaseObject outParams, ManagementScope scope)
+    {
+        bool jobCompleted = true;
+
+        //Retrieve msvc_StorageJob path. This is a full wmi path
+        string JobPath = (string)outParams["Job"];
+        ManagementObject Job = new ManagementObject(scope, new ManagementPath(JobPath), null);
+        //Try to get storage job information
+        Job.Get();
+        while ((UInt16)Job["JobState"] == JobState.Starting
+            || (UInt16)Job["JobState"] == JobState.Running)
+        {
+            Console.WriteLine("In progress... {0}% completed.", Job["PercentComplete"]);
+
+            await Task.Delay(1000);
+            Job.Get();
+        }
+
+        //Figure out if job failed
+        UInt16 jobState = (UInt16)Job["JobState"];
+        if (jobState != JobState.Completed)
+        {
+            UInt16 jobErrorCode = (UInt16)Job["ErrorCode"];
+            Console.WriteLine("Error Code:{0}", jobErrorCode);
+            Console.WriteLine("ErrorDescription: {0}", (string)Job["ErrorDescription"]);
+            jobCompleted = false;
+        }
+        return jobCompleted;
+    }
+    public string GetIpForVM(VM vM)
+    {
+        return GetIpForVM(this.GetVS(vM.VmName), scope, 3).Result;
+    }
+    static async Task<string> GetIpForVM(ManagementObject vm, ManagementScope scope, int timeOutTime)
+    {
+        string ip = null;
+
+        TimeSpan timeOut = TimeSpan.FromSeconds(timeOutTime);
+
+
+        string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
+               "SELECT * FROM {0} where InstanceID like \"Microsoft:GuestNetwork\\\\{1}\\\\%\"", "Msvm_GuestNetworkAdapterConfiguration", vm["Name"]);
+        SelectQuery vmQuery = new SelectQuery(vmQueryWql);
+        string managmentPath;
+        using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
+        using (ManagementObjectCollection vmCollection = vmSearcher.Get())
+        {
+            managmentPath = vmCollection.Cast<ManagementObject>().First().Path.Path;
+        }
+        ManagementObject networkAdaper = new ManagementObject(managmentPath);
+        int count = 0;
+        do
+        {
+            if (count != 0)
+                await Task.Delay(1000);
+            networkAdaper.Get();
+            if (((string[])networkAdaper.GetPropertyValue("IPAddresses")).Count() == 2)
+            {
+                ip = ((string[])networkAdaper.GetPropertyValue("IPAddresses"))[0];
+            }
+            count++;
+        } while (ip is null && TimeSpan.FromSeconds(count) < timeOut);
+
+
+        return ip;
+
+    }
+
+
+    /*static string GetConfigOnlyVirtualSystemExportSettingDataInstance(ManagementScope scope)
+    {
+        ManagementPath settingPath = new ManagementPath("Msvm_VirtualSystemExportSettingData");
+
+        ManagementClass exportSettingDataClass = new ManagementClass(scope, settingPath, null);
+        ManagementObject exportSettingData = exportSettingDataClass.CreateInstance();
+
+        // Do not copy VHDs and AVHDs but copy the Snapshot configuration and Saved State information (Runtime information) if present
+        exportSettingData["CopySnapshotConfiguration"] = 0;
+        exportSettingData["CopyVmRuntimeInformation"] = true;
+        exportSettingData["CopyVmStorage"] = false;
+        exportSettingData["CreateVmExportSubdirectory"] = true;
+
+        string settingData = exportSettingData.GetText(TextFormat.CimDtd20);
+
+        exportSettingData.Dispose();
+        exportSettingDataClass.Dispose();
+
+        return settingData;
+    }
+    */
+}
 }

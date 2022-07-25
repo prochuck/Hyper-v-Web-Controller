@@ -7,11 +7,12 @@ namespace Hyper_v_Web_Controller.Domain
     public class VMRepository : IVMRepository
     {
         AppDBContext dbContext;
+        IHyperVThing hyperVThing;
 
-
-        public VMRepository(AppDBContext dbContext)
+        public VMRepository(AppDBContext dbContext, IHyperVThing hyperVThing)
         {
             this.dbContext = dbContext;
+            this.hyperVThing = hyperVThing;
         }
 
         public void Create(VM item)
@@ -27,12 +28,29 @@ namespace Hyper_v_Web_Controller.Domain
 
         public VM Get(int id)
         {
-            return dbContext.VMs.Include(e => e.Creator).Include(e=>e.RealizedVMImage).Where(e => e.Id == id).First();
+            VM vM = dbContext.VMs.Include(e => e.Creator).Include(e => e.RealizedVMImage).Where(e => e.Id == id).First();
+            vM.machineState = hyperVThing.GetVMState(vM);
+            if (vM.machineState == VMState.Enabled)
+            {
+                vM.ip = hyperVThing.GetIpForVM(vM);
+            }
+            return vM;
         }
 
         public IEnumerable<VM> GetList()
         {
-            return dbContext.VMs.Include(e => e.Creator).Include(e => e.RealizedVMImage);
+            IEnumerable<VM> vMs = dbContext.VMs.Include(e => e.Creator).Include(e => e.RealizedVMImage);
+            foreach(VM vM in vMs)
+            {
+                vM.machineState = hyperVThing.GetVMState(vM);
+                if (vM.machineState == VMState.Enabled)
+                {
+                    vM.ip = hyperVThing.GetIpForVM(vM);
+                }
+            }
+            
+
+            return vMs;
         }
         /// <summary>
         /// получает машины пользователя по его id
@@ -41,7 +59,16 @@ namespace Hyper_v_Web_Controller.Domain
         /// <returns></returns>
         public IEnumerable<VM> GetList(int userId)
         {
-            return dbContext.VMs.Include(e => e.Creator).Include(e => e.RealizedVMImage).Where(e => e.CreatorId == userId);
+            IEnumerable<VM> vMs = dbContext.VMs.Include(e => e.Creator).Include(e => e.RealizedVMImage).Where(e => e.CreatorId == userId);
+            foreach (VM vM in vMs)
+            {
+                vM.machineState = hyperVThing.GetVMState(vM);
+                if (vM.machineState == VMState.Enabled)
+                {
+                    vM.ip = hyperVThing.GetIpForVM(vM);
+                }
+            }
+            return vMs;
         }
 
         public void Save()
@@ -56,5 +83,5 @@ namespace Hyper_v_Web_Controller.Domain
     }
 }
 
-   
+
 

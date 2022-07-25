@@ -25,7 +25,9 @@ namespace Hyper_v_Web_Controller.Models
         [Required]
         public int RealizedVMImageId { get; set; }
         public VMImage RealizedVMImage { get; set; }
+        [NotMapped]
         public VMState machineState { get; set; } = VMState.Disabled;
+        [NotMapped]
         public string? ip { get; set; } = null;
 
     }
