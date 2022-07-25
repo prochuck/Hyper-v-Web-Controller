@@ -16,7 +16,7 @@ namespace Hyper_v_Web_Controller.Interfaces
         public bool DeleteVM(VM vm, string userName);
         public bool CreateSnapshot(VM vm);
         public bool RollbackMachine(VM VMToRollback,int snapShotId);
-        public string? TurnOnVM(VM vm);
+        public void TurnOnVM(VM vm);
         public bool TurnOffVM(VM vm);
         public VMState GetVMState(VM vm);
         public string GetIpForVM(VM vM, int timeOut);

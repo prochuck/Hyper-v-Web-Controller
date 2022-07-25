@@ -26,21 +26,15 @@ namespace Hyper_v_Web_Controller.Controllers
 		[HttpPost]
 		public IActionResult SwitchVMState(int Id)
 		{
-			if (hyperVThing.GetVMState(VMRepository.Get(Id)) == VMState.Enabled)
+			if ((VMRepository.Get(Id).machineState) == VMState.Enabled)
 			{
 				VM vM = VMRepository.Get(Id);
 				hyperVThing.TurnOffVM(vM);
-				vM.machineState = VMState.Disabled;
-				VMRepository.Update(vM);
-				VMRepository.Save();
 			}
 			else
 			{
 				VM vM = VMRepository.Get(Id);
-				vM.ip = hyperVThing.TurnOnVM(vM);
-				vM.machineState = VMState.Enabled;
-				VMRepository.Update(vM);
-				VMRepository.Save();
+				hyperVThing.TurnOnVM(vM);
 			}
 			return Redirect("/HyperV/GetVMs");
 		}

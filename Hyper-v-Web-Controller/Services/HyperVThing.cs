@@ -123,13 +123,13 @@ namespace Hyper_v_Web_Controller.Services
         {
             return false;
         }
-        public string? TurnOnVM(VM vm) //Возвращаяет сообщение об успехе включения ВМ
+        public void TurnOnVM(VM vm) //Возвращаяет сообщение об успехе включения ВМ
         {
             ManagementObject virtualSystem = GetVS(vm.VmName);
             ManagementBaseObject inParams = virtualSystem.GetMethodParameters("RequestStateChange");
             inParams["RequestedState"] = VMState.Enabled;
             virtualSystem.InvokeMethod("RequestStateChange", inParams, null);
-            return GetIpForVM(virtualSystem, scope, 30).Result;
+            
         }
         public bool TurnOffVM(VM vm) //Возвращаяет сообщение об успехе выключения ВМ
         {
