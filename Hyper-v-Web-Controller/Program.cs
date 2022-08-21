@@ -14,7 +14,10 @@ builder.Services.AddDbContext<AppDBContext>(e => e.UseSqlServer(@"Data Source=(l
 builder.Services.AddTransient<IUserRepository, UserRepository>();
 builder.Services.AddTransient<IVMImageRepository, VMImageRepository>();
 builder.Services.AddTransient<IVMRepository, VMRepository>();
-
+builder.Services.AddHttpsRedirection(e =>
+{
+    e.HttpsPort = 55556;
+});
 
 builder.Services.AddAuthentication("Cookies").AddCookie(o =>
 {
@@ -22,6 +25,9 @@ builder.Services.AddAuthentication("Cookies").AddCookie(o =>
     o.LoginPath = "/Authentication/Login";
     o.LogoutPath = "/Authentication/Logout";
 });
+
+builder.WebHost.UseUrls("http://*:55555", "https://*:55556");
+
 var app = builder.Build();
 
 
@@ -42,9 +48,8 @@ app.UseRouting();
 app.UseAuthorization();
 
 
-
-
 app.UseEndpoints(endpoints => endpoints.MapControllers());
 
 
 app.Run();
+
