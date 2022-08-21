@@ -20,9 +20,10 @@ namespace Hyper_v_Web_Controller.Controllers
     public class AuthenticationController : Controller
     {
         IUserRepository userRepository;
-
-        public AuthenticationController(IUserRepository repository)
+        IHashService hashService;
+        public AuthenticationController(IHashService hashService, IUserRepository repository)
         {
+            this.hashService = hashService;
             userRepository = repository;
         }
 
@@ -38,8 +39,8 @@ namespace Hyper_v_Web_Controller.Controllers
 
             if (!(user is null))
             {
-                // if (user.PasswordHash != password.GetHashCode().ToString())
-                //     return View();
+                if (user.PasswordHash != hashService.GetHash(password))
+                    return View();
                 var claims = new List<Claim> {
                     new Claim(ClaimTypes.Name, user.Login),
                      new Claim("Id", user.Id.ToString()),
@@ -75,11 +76,19 @@ namespace Hyper_v_Web_Controller.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult RegisterUser(string login, string password, int roleId)
         {
+            if (!(login.Count() > 3 && login.Count() < 30 && login.All(c => char.IsLetterOrDigit(c))))
+            {
+                return BadRequest("Логин должен содержать только буквы и цифры и быть длиной от 3 до 30");
+            }
+            if (!(password.Count() >= 3 && password.Count() < 30 && password.All(c => char.IsLetterOrDigit(c))))
+            {
+                return BadRequest("Пароль должен содержать только буквы и цифры и быть длиной от 3 до 30");
+            }
             if (!(userRepository.Get(login) is null))
             {
                 return BadRequest("Логин занят");
             }
-            userRepository.Create(new User() { Login = login, PasswordHash = password.GetHashCode().ToString(), RoleId = roleId });
+            userRepository.Create(new User() { Login = login, PasswordHash = hashService.GetHash(password), RoleId = roleId });
             userRepository.Save();
             return View();
         }

@@ -14,6 +14,7 @@ builder.Services.AddDbContext<AppDBContext>(e => e.UseSqlServer(@"Data Source=(l
 builder.Services.AddTransient<IUserRepository, UserRepository>();
 builder.Services.AddTransient<IVMImageRepository, VMImageRepository>();
 builder.Services.AddTransient<IVMRepository, VMRepository>();
+builder.Services.AddTransient<IHashService, HashService>();
 builder.Services.AddHttpsRedirection(e =>
 {
     e.HttpsPort = 55556;

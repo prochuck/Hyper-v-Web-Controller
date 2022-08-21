@@ -12,13 +12,13 @@ namespace Hyper_v_Web_Controller
         public DbSet<VM> VMs { get; set; }
 
 
-        public AppDBContext(DbContextOptions options, IConfiguration configuration,IHyperVThing hyperVThing) : base(options)
+        public AppDBContext(DbContextOptions options, IConfiguration configuration,IHyperVThing hyperVThing,IHashService hashService) : base(options)
         {
             if (Database.EnsureCreated())
             {
                 Roles.Add(new Role() { RoleName = "Admin" });
                 Roles.Add(new Role() { RoleName = "User" });
-                Users.Add(new User() { RoleId = 1, Login = "admin", PasswordHash = "123".GetHashCode().ToString() });
+                Users.Add(new User() { RoleId = 1, Login = "admin", PasswordHash = hashService.GetHash("123").ToString() });
                 this.SaveChanges();
             }
             this.SaveChanges();
