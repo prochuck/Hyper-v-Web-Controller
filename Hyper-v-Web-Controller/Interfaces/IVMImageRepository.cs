@@ -10,5 +10,6 @@ namespace Hyper_v_Web_Controller.Interfaces
         void Update(VMImage item);
         void Delete(int id);
         void Save();
+        void UpdateVMImagesList();
     }
 }

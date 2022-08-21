@@ -1,0 +1,39 @@
+﻿@using Hyper_v_Web_Controller.Models
+@using Hyper_v_Web_Controller.Controllers
+@using Hyper_v_Web_Controller.Services
+@model List<VM> 
+
+<h1>Управление ВМ (включение, выключение, удаление)</h1>
+<p></p>
+<h2>Список ВМ:</h2>
+<p></p>
+
+@foreach(VM vM in Model)
+{
+
+    <h3>@vM.VmName <q>@vM.machineState.ToString()</q></h3>
+    if (@vM.ip!=null)
+    {
+        string ip = "Ip для подключения к ВМ: ";
+        @ip;
+        @vM.ip;
+        <p></p>
+    }
+    <form method="post" action="/HyperV/SwitchVMState">
+        <input name="Id" value="@vM.Id" hidden="hidden"/>    
+        @if (!(@vM.machineState==VMState.Creating))
+        {
+            if (@vM.machineState==VMState.Disabled||@vM.machineState==VMState.Disabling)
+            {
+                <input type="submit" value="Включить ВМ"/> 
+            }else if (@vM.machineState==VMState.Enabled)           
+            {
+                <input type="submit" value="Выключить ВМ"/>                 
+            }
+            
+        }       
+    </form>
+    <p></p>
+}
+
+<a href="/"><input type="button" value="Вернуться" /></a><a href="/HyperV/GetVMs"><input type="button" value="Обновить список" /></a>

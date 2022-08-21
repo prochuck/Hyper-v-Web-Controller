@@ -4,6 +4,7 @@ namespace Hyper_v_Web_Controller.Interfaces
     public interface IVMRepository
     {
         IEnumerable<VM> GetList();
+        IEnumerable<VM> GetList(int userId);
         VM Get(int id);
         void Create(VM item);
         void Update(VM item);

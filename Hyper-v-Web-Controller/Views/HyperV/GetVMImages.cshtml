@@ -1,0 +1,16 @@
+﻿@using Hyper_v_Web_Controller.Models
+@using System.Linq
+@model List<VMImage>
+
+
+
+ <h1>Создание ВМ</h1>
+  <p></p>
+  <h2>Выберите из списка образ ВМ, который хотите создать:</h2>
+    <form method="post" action="/HyperV/CreateVm">
+        @Html.DropDownList("imageId",new SelectList(@Model,"Id","Name"))
+        <input type="text" name="machineName" placeholder="Введите имя ВМ"/>
+        <input type="submit" value="Создать" />
+        <p></p>
+        <a href="/"><input type="button" value="Вернуться" /></a>
+    </form>

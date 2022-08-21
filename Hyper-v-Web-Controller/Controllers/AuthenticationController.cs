@@ -20,9 +20,10 @@ namespace Hyper_v_Web_Controller.Controllers
     public class AuthenticationController : Controller
     {
         IUserRepository userRepository;
-
-        public AuthenticationController(IUserRepository repository)
+        IHashService hashService;
+        public AuthenticationController(IHashService hashService, IUserRepository repository)
         {
+            this.hashService = hashService;
             userRepository = repository;
         }
 
@@ -35,25 +36,31 @@ namespace Hyper_v_Web_Controller.Controllers
         public async Task<IActionResult> Login(string login, string password, string? ReturnUrl)
         {
             User user = userRepository.Get(login);
-            
+
             if (!(user is null))
             {
-                if (user.PasswordHash != password.GetHashCode().ToString())
-                    return View("не верный пароль");
-                var claims = new List<Claim> { 
+                if (user.PasswordHash != hashService.GetHash(password))
+                    return View();
+                var claims = new List<Claim> {
                     new Claim(ClaimTypes.Name, user.Login),
+                     new Claim("Id", user.Id.ToString()),
                     new Claim(ClaimTypes.Role,user.Role.RoleName)
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, "Cookies");
-                
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,new ClaimsPrincipal(claimsIdentity));
-                return Redirect(ReturnUrl is null ? "/HyperV/ShowVMs" : ReturnUrl);
+
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+                return Redirect(ReturnUrl is null ? "/" : ReturnUrl);
             }
             return View();
         }
         [HttpGet]
-        public async Task<IActionResult> Logout()
+        public IActionResult Logout()
+        {
+            return View();
+        }
+        [HttpPost]
+        public async Task<IActionResult> Logout(string Void)
         {
             await HttpContext.SignOutAsync();
             return RedirectToAction("Login");
@@ -64,17 +71,24 @@ namespace Hyper_v_Web_Controller.Controllers
         {
             return View();
         }
-
         //переделать хэширование
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public IActionResult RegisterUser(string login, string password,int roleId)
+        public IActionResult RegisterUser(string login, string password, int roleId)
         {
+            if (!(login.Count() > 3 && login.Count() < 30 && login.All(c => char.IsLetterOrDigit(c))))
+            {
+                return BadRequest("Логин должен содержать только буквы и цифры и быть длиной от 3 до 30");
+            }
+            if (!(password.Count() >= 3 && password.Count() < 30 && password.All(c => char.IsLetterOrDigit(c))))
+            {
+                return BadRequest("Пароль должен содержать только буквы и цифры и быть длиной от 3 до 30");
+            }
             if (!(userRepository.Get(login) is null))
             {
                 return BadRequest("Логин занят");
             }
-            userRepository.Create(new User() { Login = login, PasswordHash = password.GetHashCode().ToString(), RoleId = roleId });
+            userRepository.Create(new User() { Login = login, PasswordHash = hashService.GetHash(password), RoleId = roleId });
             userRepository.Save();
             return View();
         }
