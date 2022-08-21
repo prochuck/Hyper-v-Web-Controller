@@ -15,11 +15,12 @@ namespace Hyper_v_Web_Controller.Controllers
 	public class HyperVController : Controller
 	{
 		IVMRepository VMRepository;
-		IVMImageRepository VMRImageepository;
+		IVMImageRepository VMImageRepository;
 		IHyperVThing hyperVThing;
-		public HyperVController(IVMRepository vMRepository, IVMImageRepository vMRImageepository, IHyperVThing hyperVThing)
+		IConfiguration configuration;
+		public HyperVController(IVMRepository vMRepository, IVMImageRepository VMImageRepository, IHyperVThing hyperVThing)
 		{
-			this.VMRImageepository = vMRImageepository;
+			this.VMImageRepository = VMImageRepository;
 			this.VMRepository = vMRepository;
 			this.hyperVThing = hyperVThing;
 		}
@@ -46,7 +47,7 @@ namespace Hyper_v_Web_Controller.Controllers
 		[HttpGet]
 		public IActionResult GetVMImages()
 		{
-			return View(VMRImageepository.GetList().ToList());
+			return View(VMImageRepository.GetList().ToList());
 		}
 
 		[HttpGet]
@@ -63,7 +64,7 @@ namespace Hyper_v_Web_Controller.Controllers
 				{
 					return BadRequest($"Имя должно быть больше 3х символов и разрешено использовать только цифры и буквы");
 				}
-				VMImage vMImage = VMRImageepository.Get(imageId);
+				VMImage vMImage = VMImageRepository.Get(imageId);
 				string userName = User.Claims.Where(e => e.Type == ClaimTypes.Name).First().Value;
 				string vmName = $"{vMImage.Name}-{userName}-{machineName}";
 				//доделать чтуки с созданием
@@ -99,6 +100,14 @@ namespace Hyper_v_Web_Controller.Controllers
 
 			}
 			return View();
+		}
+
+		[HttpGet]
+		[Authorize(Roles = "Admin")]
+		public IActionResult UpdateVMImagesList()
+        {
+			VMImageRepository.UpdateVMImagesList();
+			return Ok();
 		}
 
 
