@@ -1,0 +1,11 @@
+﻿@using Hyper_v_Web_Controller.Controllers
+@using Hyper_v_Web_Controller.Models
+@model List<User>
+@{
+    Layout = null;
+}
+@foreach (User user in Model)
+{
+    <text>Порядковый номер:@user.Id Логин:@user.Login Роль:@user.Role.RoleName</text>
+    <a href="/User/EditUser?Id=@user.Id"><input type="button" value="Редактировать" /></a>
+}

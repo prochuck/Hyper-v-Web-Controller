@@ -107,7 +107,7 @@ namespace Hyper_v_Web_Controller.Controllers
 		public IActionResult UpdateVMImagesList()
         {
 			VMImageRepository.UpdateVMImagesList();
-			return Ok();
+			return Redirect("/");
 		}
 
 

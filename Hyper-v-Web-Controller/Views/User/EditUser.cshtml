@@ -1,0 +1,23 @@
+﻿@using Hyper_v_Web_Controller.Controllers
+@using Hyper_v_Web_Controller.Models
+@model User
+@{
+    Layout = null;
+}
+
+ <h1>Редактирование пользователя:</h1>
+<form method="post">
+    <text>Id: @Model.Id</text>
+    <input type="text" name="Id" value="@Model.Id" hidden="hidden"/>
+    <input type="text" name="Login" value="@Model.Login" />
+    <input type="text" name="Password" placeholder="Введите новый пароль" />
+    <text>Роль: @Model.Role.RoleName</text>      
+    <p></p>
+    <input type="submit" value="Изменить пользователя"/>
+</form>
+<form method="post" action="/User/DeleteUser">
+    <input type="text" name="Id" value="@Model.Id" hidden="hidden"/> 
+    <input type="submit" value="Удалить пользователя"/>
+</form>
+
+
